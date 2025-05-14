@@ -1,0 +1,186 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 221 83% 53%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221 83% 53%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  h1 {
+    @apply text-2xl font-bold tracking-tight;
+  }
+  h2 {
+    @apply text-xl font-semibold tracking-tight;
+  }
+  h3 {
+    @apply text-lg font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  .btn-icon {
+    @apply h-10 w-10 transition-all duration-200 ease-in-out;
+  }
+
+  .btn-icon-primary {
+    @apply btn-icon bg-blue-100 text-blue-600 hover:bg-blue-200 hover:text-blue-700 hover:scale-110;
+  }
+
+  .btn-icon-success {
+    @apply btn-icon bg-green-100 text-green-600 hover:bg-green-200 hover:text-green-700 hover:scale-110;
+  }
+
+  .btn-icon-danger {
+    @apply btn-icon bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-700 hover:scale-110;
+  }
+
+  .btn-icon-warning {
+    @apply btn-icon bg-orange-100 text-orange-600 hover:bg-orange-200 hover:text-orange-700 hover:scale-110;
+  }
+
+  .table-header {
+    @apply bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium text-sm;
+  }
+
+  .table-header-success {
+    @apply bg-gradient-to-r from-green-600 to-green-700 text-white font-medium text-sm;
+  }
+
+  .table-header-warning {
+    @apply bg-gradient-to-r from-orange-500 to-orange-600 text-white font-medium text-sm;
+  }
+
+  /* Estilos para menús activos */
+  .menu-active {
+    @apply text-orange-500 font-medium;
+  }
+
+  .tab-active {
+    @apply text-orange-500 border-b-2 border-orange-500;
+  }
+}
+
+/* Estilos específicos para recibos térmicos */
+.thermal-receipt {
+  width: 80mm;
+  font-family: "Arial, sans-serif";
+  font-size: 12px;
+  line-height: 1.2;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background-color: white;
+}
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .print-content,
+  .print-content * {
+    visibility: visible;
+    font-family: "Arial, sans-serif";
+  }
+
+  .print-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    margin: 0;
+    padding: 0;
+  }
+
+  html,
+  body {
+    width: 80mm;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    font-family: "Arial, sans-serif";
+  }
+
+  /* Asegurarse de que el recibo térmico se imprima exactamente como se ve */
+  .thermal-receipt {
+    width: 80mm;
+    margin: 0;
+    padding: 0;
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-family: "Arial, sans-serif";
+  }
+}
