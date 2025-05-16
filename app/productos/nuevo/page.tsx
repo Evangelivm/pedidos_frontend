@@ -59,7 +59,7 @@ export default function NewProductPage() {
     presentacion_id: "",
     stock: "",
     stock_minimo: "5", // Default minimum stock
-    imagen: "/faraon.png",
+    imagen: "",
     activo: true,
   });
 
@@ -110,7 +110,7 @@ export default function NewProductPage() {
             presentacion_id: product.presentacion_id.toString(),
             stock: product.stock.toString(),
             stock_minimo: product.stock_minimo.toString(),
-            imagen: product.imagen || "/faraon.png",
+            imagen: product.imagen || "/abarrote.webp",
             activo: product.activo,
           });
           setIsEditing(true);
@@ -171,7 +171,7 @@ export default function NewProductPage() {
         precio_minimo: minimumPrice,
         stock: Number(productData.stock),
         stock_minimo: Number(productData.stock_minimo) || 5,
-        imagen: "/faraon.png", // Always use Faraon image
+        imagen: "/abarrote.webp", // Always use Abarrote image
         activo: true,
       };
 
@@ -382,13 +382,13 @@ export default function NewProductPage() {
                   <div className="mt-1 flex flex-col items-center gap-2">
                     <div className="relative w-full h-48 border rounded-md overflow-hidden">
                       <img
-                        src="/faraon.png"
+                        src="/abarrote.webp"
                         alt="Arroz Faraon"
                         className="w-full h-full object-contain"
                       />
                     </div>
                     <p className="text-xs text-gray-500 mt-1 text-center">
-                      Todos los productos utilizan la imagen de Arroz Faraon
+                      Todos los productos utilizan la imagen de abarrotes.
                     </p>
                   </div>
                 </div>

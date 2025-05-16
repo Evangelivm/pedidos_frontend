@@ -1,37 +1,59 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect, useRef } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Truck, Calendar, Clock, Phone, MapPin, Save, Package, User, Printer } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
-import { ThermalDispatchReceipt } from "@/components/thermal-dispatch-receipt"
-import { useRouter } from "next/navigation"
-import { ThermalPrinter } from "@/lib/thermal-printer"
+import { useState, useEffect, useRef } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Truck,
+  Calendar,
+  Clock,
+  Phone,
+  MapPin,
+  Save,
+  Package,
+  User,
+  Printer,
+} from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { ThermalDispatchReceipt } from "@/components/thermal-dispatch-receipt";
+import { useRouter } from "next/navigation";
+import { ThermalPrinter } from "@/lib/thermal-printer";
 
 interface DispatchFormModalProps {
-  order: any
-  isOpen: boolean
-  onClose: () => void
+  order: any;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export function DispatchFormModal({ order, isOpen, onClose }: DispatchFormModalProps) {
-  const { toast } = useToast()
-  const router = useRouter()
-  const receiptRef = useRef<HTMLDivElement>(null)
-  const [showPrintPreview, setShowPrintPreview] = useState(false)
+export function DispatchFormModal({
+  order,
+  isOpen,
+  onClose,
+}: DispatchFormModalProps) {
+  const { toast } = useToast();
+  const router = useRouter();
+  const receiptRef = useRef<HTMLDivElement>(null);
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [dispatchInfo, setDispatchInfo] = useState({
-    customerName: `Cliente de Pedido #${order?.id?.slice(0, 6) || ""}`,
+    customerName: `Cliente de Pedido #${order?.id || ""}`,
     address: "",
     phone: "",
-    deliveryDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10), // Tomorrow
+    deliveryDate: new Date(Date.now() + 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10), // Tomorrow
     creationTime: new Date().toISOString().slice(0, 16),
     notes: "",
-  })
+  });
 
   // Set creation time when modal opens
   useEffect(() => {
@@ -39,24 +61,30 @@ export function DispatchFormModal({ order, isOpen, onClose }: DispatchFormModalP
       setDispatchInfo((prev) => ({
         ...prev,
         creationTime: new Date().toISOString().slice(0, 16),
-        customerName: `Cliente de Pedido #${order?.id?.slice(0, 6) || ""}`,
-      }))
+        customerName: `Cliente de Pedido #${order?.id || ""}`,
+      }));
     }
-  }, [isOpen, order])
+  }, [isOpen, order]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setDispatchInfo((prev) => ({ ...prev, [name]: value }))
-  }
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setDispatchInfo((prev) => ({ ...prev, [name]: value }));
+  };
 
   // Calculate total number of products
-  const totalProductCount = order?.items.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0
+  const totalProductCount =
+    order?.items.reduce((sum: number, item: any) => sum + item.quantity, 0) ||
+    0;
 
   const handleSave = () => {
     // In a real app, you would save this to a database
     // For this demo, we'll save to localStorage
 
-    const existingDispatches = JSON.parse(localStorage.getItem("dispatches") || "{}")
+    const existingDispatches = JSON.parse(
+      localStorage.getItem("dispatches") || "{}"
+    );
 
     existingDispatches[order.id] = {
       ...dispatchInfo,
@@ -65,34 +93,35 @@ export function DispatchFormModal({ order, isOpen, onClose }: DispatchFormModalP
       totalProductCount,
       createdAt: new Date().toISOString(),
       status: "Pendiente",
-    }
+    };
 
-    localStorage.setItem("dispatches", JSON.stringify(existingDispatches))
+    localStorage.setItem("dispatches", JSON.stringify(existingDispatches));
 
     toast({
       title: "Despacho creado",
       description: "La información de despacho ha sido guardada correctamente.",
-    })
+    });
 
     // Redirect to dispatches page
-    onClose()
-    router.push("/despachos")
-  }
+    onClose();
+    router.push("/despachos");
+  };
 
   // Modificar la función handlePrint
   const handlePrint = async () => {
     try {
       if (receiptRef.current) {
         // Crear una ventana de impresión que preserve exactamente el formato
-        const printWindow = window.open("", "_blank", "width=800,height=600")
+        const printWindow = window.open("", "_blank", "width=800,height=600");
 
         if (!printWindow) {
           toast({
             title: "Error de impresión",
-            description: "No se pudo abrir la ventana de impresión. Verifique que los popups estén permitidos.",
+            description:
+              "No se pudo abrir la ventana de impresión. Verifique que los popups estén permitidos.",
             variant: "destructive",
-          })
-          return
+          });
+          return;
         }
 
         // Escribir el contenido exacto a la nueva ventana
@@ -132,9 +161,9 @@ export function DispatchFormModal({ order, isOpen, onClose }: DispatchFormModalP
               </script>
             </body>
           </html>
-        `)
+        `);
 
-        printWindow.document.close()
+        printWindow.document.close();
 
         const dispatchData = {
           orderId: order.id,
@@ -146,27 +175,29 @@ export function DispatchFormModal({ order, isOpen, onClose }: DispatchFormModalP
           notes: dispatchInfo.notes,
           items: order.items,
           totalProductCount,
-        }
+        };
 
         // Imprimir usando la biblioteca de impresión térmica
-        const success = await ThermalPrinter.printDispatch(dispatchData, { showDialog: true })
+        const success = await ThermalPrinter.printDispatch(dispatchData, {
+          showDialog: true,
+        });
 
         if (success) {
           toast({
             title: "Impresión exitosa",
             description: "El despacho ha sido enviado a la impresora térmica.",
-          })
+          });
         }
       }
     } catch (error) {
-      console.error("Error al imprimir:", error)
+      console.error("Error al imprimir:", error);
       toast({
         title: "Error de impresión",
         description: "Ocurrió un error al intentar imprimir el despacho.",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   const dispatchData = {
     orderId: order.id,
@@ -178,9 +209,9 @@ export function DispatchFormModal({ order, isOpen, onClose }: DispatchFormModalP
     notes: dispatchInfo.notes,
     items: order.items,
     totalProductCount,
-  }
+  };
 
-  if (!order) return null
+  if (!order) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -190,7 +221,7 @@ export function DispatchFormModal({ order, isOpen, onClose }: DispatchFormModalP
             <Truck className="h-5 w-5" />
             {showPrintPreview
               ? "Vista Previa de Impresión"
-              : "Formulario de Despacho - Pedido #" + order.id.slice(0, 8)}
+              : "Formulario de Despacho - Pedido #" + order.id}
           </DialogTitle>
         </DialogHeader>
 
@@ -198,15 +229,24 @@ export function DispatchFormModal({ order, isOpen, onClose }: DispatchFormModalP
           <>
             <div className="border rounded p-2 overflow-auto max-h-[70vh]">
               <div className="print-content">
-                <ThermalDispatchReceipt ref={receiptRef} dispatch={dispatchData} />
+                <ThermalDispatchReceipt
+                  ref={receiptRef}
+                  dispatch={dispatchData}
+                />
               </div>
             </div>
 
             <DialogFooter className="mt-4">
-              <Button variant="outline" onClick={() => setShowPrintPreview(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowPrintPreview(false)}
+              >
                 Volver
               </Button>
-              <Button onClick={handlePrint} className="bg-green-600 hover:bg-green-700">
+              <Button
+                onClick={handlePrint}
+                className="bg-green-600 hover:bg-green-700"
+              >
                 <Printer className="h-4 w-4 mr-2" />
                 Imprimir Despacho
               </Button>
@@ -217,10 +257,15 @@ export function DispatchFormModal({ order, isOpen, onClose }: DispatchFormModalP
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Left column - Customer and Delivery Info */}
               <div className="space-y-4">
-                <h3 className="font-semibold text-sm border-b pb-1">Información del Cliente y Entrega</h3>
+                <h3 className="font-semibold text-sm border-b pb-1">
+                  Información del Cliente y Entrega
+                </h3>
 
                 <div className="space-y-2">
-                  <Label htmlFor="customerName" className="flex items-center gap-2">
+                  <Label
+                    htmlFor="customerName"
+                    className="flex items-center gap-2"
+                  >
                     <User className="h-4 w-4" /> Nombre del Cliente
                   </Label>
                   <Input
@@ -258,7 +303,10 @@ export function DispatchFormModal({ order, isOpen, onClose }: DispatchFormModalP
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="deliveryDate" className="flex items-center gap-2">
+                  <Label
+                    htmlFor="deliveryDate"
+                    className="flex items-center gap-2"
+                  >
                     <Calendar className="h-4 w-4" /> Fecha de Entrega
                   </Label>
                   <Input
@@ -271,7 +319,10 @@ export function DispatchFormModal({ order, isOpen, onClose }: DispatchFormModalP
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="creationTime" className="flex items-center gap-2">
+                  <Label
+                    htmlFor="creationTime"
+                    className="flex items-center gap-2"
+                  >
                     <Clock className="h-4 w-4" /> Hora de Creación del Despacho
                   </Label>
                   <Input
@@ -301,7 +352,9 @@ export function DispatchFormModal({ order, isOpen, onClose }: DispatchFormModalP
 
               {/* Right column - Order Details */}
               <div>
-                <h3 className="font-semibold text-sm border-b pb-1 mb-4">Detalle del Pedido</h3>
+                <h3 className="font-semibold text-sm border-b pb-1 mb-4">
+                  Detalle del Pedido
+                </h3>
 
                 <div className="border rounded-md overflow-hidden">
                   <div className="bg-gray-100 p-2 font-medium grid grid-cols-12 text-sm">
@@ -310,12 +363,17 @@ export function DispatchFormModal({ order, isOpen, onClose }: DispatchFormModalP
                   </div>
                   <div className="max-h-[40vh] overflow-y-auto">
                     {order.items.map((item: any) => (
-                      <div key={item.id} className="grid grid-cols-12 items-center p-2 border-t text-sm">
+                      <div
+                        key={item.id}
+                        className="grid grid-cols-12 items-center p-2 border-t text-sm"
+                      >
                         <div className="col-span-9 font-medium truncate flex items-center">
                           <Package className="h-3 w-3 mr-1 text-gray-400" />
                           {item.name}
                         </div>
-                        <div className="col-span-3 text-center font-bold">{item.quantity}</div>
+                        <div className="col-span-3 text-center font-bold">
+                          {item.quantity}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -329,11 +387,16 @@ export function DispatchFormModal({ order, isOpen, onClose }: DispatchFormModalP
                     <Truck className="h-4 w-4" /> Información de Despacho
                   </h4>
                   <p className="text-green-600 mb-1">
-                    • Este pedido será preparado para entrega según la información proporcionada.
+                    • Este pedido será preparado para entrega según la
+                    información proporcionada.
                   </p>
-                  <p className="text-green-600 mb-1">• Asegúrese de verificar la dirección y teléfono del cliente.</p>
+                  <p className="text-green-600 mb-1">
+                    • Asegúrese de verificar la dirección y teléfono del
+                    cliente.
+                  </p>
                   <p className="text-green-600">
-                    • El cliente recibirá una notificación cuando el pedido sea despachado.
+                    • El cliente recibirá una notificación cuando el pedido sea
+                    despachado.
                   </p>
                 </div>
               </div>
@@ -343,11 +406,17 @@ export function DispatchFormModal({ order, isOpen, onClose }: DispatchFormModalP
               <Button variant="outline" onClick={onClose}>
                 Cancelar
               </Button>
-              <Button onClick={() => setShowPrintPreview(true)} className="bg-blue-600 hover:bg-blue-700">
+              <Button
+                onClick={() => setShowPrintPreview(true)}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
                 <Printer className="h-4 w-4 mr-2" />
                 Vista Previa
               </Button>
-              <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700">
+              <Button
+                onClick={handleSave}
+                className="bg-green-600 hover:bg-green-700"
+              >
                 <Save className="h-4 w-4 mr-2" />
                 Crear Despacho
               </Button>
@@ -356,5 +425,5 @@ export function DispatchFormModal({ order, isOpen, onClose }: DispatchFormModalP
         )}
       </DialogContent>
     </Dialog>
-  )
+  );
 }

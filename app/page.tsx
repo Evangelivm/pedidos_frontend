@@ -1,5 +1,4 @@
 "use client";
-
 import OrdersTable from "@/components/orders-table";
 import { SearchBar } from "@/components/search-bar";
 import { TopBar } from "@/components/top-bar";
@@ -17,7 +16,7 @@ import {
 import Link from "next/link";
 import { exportOrdersToExcel } from "@/lib/export-utils";
 import { useToast } from "@/components/ui/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
@@ -28,10 +27,45 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
+import connections from "@/data/connections";
+
+type Order = {
+  id: number;
+  numero: string;
+  detalle_pedidos: Array<{
+    id: number;
+    descripcion: string;
+    precio_sugerido: number;
+    precio_minimo: number;
+    imagen: string | null;
+    cantidad: number;
+    productos: {
+      id: number;
+      codigo: string;
+      descripcion: string;
+      imagen: string | null;
+      presentaciones: {
+        id: number;
+        nombre: string;
+      };
+    };
+  }>;
+  total: number;
+  metodo_pago: string;
+  punto_venta: string;
+  created_at: string;
+  estado: "PENDIENTE" | "COMPLETADO" | "CANCELADO" | "EN_RUTA" | "ENTREGADO";
+  estado_pago: "PAGADO" | "PENDIENTE" | "CANCELADO";
+  clientes: {
+    nombre: string;
+  };
+};
 
 export default function OrdersPage() {
   const { toast } = useToast();
   const [showFilters, setShowFilters] = useState(false);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
 
   // Estados para los filtros
   const [statusFilter, setStatusFilter] = useState("");
@@ -42,36 +76,93 @@ export default function OrdersPage() {
   const [minAmount, setMinAmount] = useState("");
   const [maxAmount, setMaxAmount] = useState("");
 
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const data = await connections.pedidos.getAll({
+          page: 1,
+          limit: 100,
+        });
+        const response = data.data.items;
+
+        if (response && Array.isArray(response)) {
+          setOrders(response);
+          setFilteredOrders(response);
+        } else if (response?.data && Array.isArray(response.data)) {
+          setOrders(response.data);
+          setFilteredOrders(response.data);
+        } else {
+          toast({
+            title: "Error",
+            description: "Formato de datos inesperado al cargar pedidos",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+        toast({
+          title: "Error",
+          description: "No se pudo cargar la lista de pedidos",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchOrders();
+  }, [toast]);
+
   const handleExportToExcel = () => {
     try {
-      // Obtener los pedidos del localStorage
-      const storedOrders = JSON.parse(localStorage.getItem("orders") || "[]");
-
-      if (storedOrders.length === 0) {
+      if (!filteredOrders.length) {
         toast({
-          title: "No hay datos para exportar",
+          title: "Sin datos para exportar",
           description: "No hay pedidos disponibles para exportar.",
           variant: "destructive",
         });
         return;
       }
 
-      // Exportar a Excel
-      exportOrdersToExcel(storedOrders);
-
+      exportOrdersToExcel(filteredOrders);
       toast({
         title: "Exportación exitosa",
-        description: `Se han exportado ${storedOrders.length} pedidos a Excel.`,
+        description: `Se han exportado ${filteredOrders.length} pedidos a Excel.`,
       });
     } catch (error) {
       console.error("Error al exportar a Excel:", error);
-
       toast({
         title: "Error de exportación",
         description: "No se pudieron exportar los pedidos. Inténtelo de nuevo.",
         variant: "destructive",
       });
     }
+  };
+
+  const handleSearch = (term: string) => {
+    if (!term.trim()) {
+      setFilteredOrders(orders);
+      return;
+    }
+
+    const lowerTerm = term.toLowerCase();
+
+    const filtered = orders.filter((order) => {
+      const numero = order.numero?.toString().toLowerCase() || "";
+      const clienteNombre =
+        order.clientes?.nombre?.toString().toLowerCase() || "";
+      const metodoPago = order.metodo_pago?.toString().toLowerCase() || "";
+      const estadoPedido = order.estado?.toString().toLowerCase() || "";
+      const estadoPago = order.estado_pago?.toString().toLowerCase() || "";
+
+      return (
+        numero.includes(lowerTerm) ||
+        clienteNombre.includes(lowerTerm) ||
+        metodoPago.includes(lowerTerm) ||
+        estadoPedido.includes(lowerTerm) ||
+        estadoPago.includes(lowerTerm)
+      );
+    });
+
+    setFilteredOrders(filtered);
   };
 
   // Contar filtros activos
@@ -132,8 +223,11 @@ export default function OrdersPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 mb-6 items-start sm:items-center">
-          <SearchBar placeholder="Buscar por cliente, vendedor o estado..." />
-          <Button
+          <SearchBar
+            placeholder="Buscar por cliente, vendedor o estado..."
+            onSearch={handleSearch}
+          />
+          {/* <Button
             variant={activeFiltersCount > 0 ? "default" : "outline"}
             className={
               activeFiltersCount > 0
@@ -153,7 +247,7 @@ export default function OrdersPage() {
                 Filtros
               </>
             )}
-          </Button>
+          </Button> */}
         </div>
 
         {showFilters && (
@@ -179,7 +273,6 @@ export default function OrdersPage() {
                 </Button>
               </div>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Estado del pedido */}
               <div className="space-y-2">
@@ -202,28 +295,6 @@ export default function OrdersPage() {
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Fecha desde */}
-              {/* <div className="space-y-2">
-                <Label htmlFor="startDate" className="flex items-center gap-2">
-                  <div className="bg-green-100 p-1 rounded-full">
-                    <Calendar className="h-4 w-4 text-green-600" />
-                  </div>
-                  Fecha desde
-                </Label>
-                <DatePicker id="startDate" date={startDate} setDate={setStartDate} placeholder="Seleccionar fecha" />
-              </div> */}
-
-              {/* Fecha hasta */}
-              {/* <div className="space-y-2">
-                <Label htmlFor="endDate" className="flex items-center gap-2">
-                  <div className="bg-green-100 p-1 rounded-full">
-                    <Calendar className="h-4 w-4 text-green-600" />
-                  </div>
-                  Fecha hasta
-                </Label>
-                <DatePicker id="endDate" date={endDate} setDate={setEndDate} placeholder="Seleccionar fecha" />
-              </div> */}
 
               {/* Vendedor */}
               <div className="space-y-2">
@@ -298,11 +369,9 @@ export default function OrdersPage() {
                 </div>
               </div>
             </div>
-
             <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end">
               <Button
                 onClick={() => {
-                  // Aquí iría la lógica para aplicar los filtros a la tabla
                   toast({
                     title: "Filtros aplicados",
                     description: `Se han aplicado ${activeFiltersCount} filtros a la búsqueda.`,
@@ -317,7 +386,7 @@ export default function OrdersPage() {
         )}
 
         <div className="mt-4 overflow-auto flex-1 bg-white rounded-lg shadow-sm border border-gray-200">
-          <OrdersTable />
+          <OrdersTable orders={filteredOrders} />
         </div>
       </div>
     </main>

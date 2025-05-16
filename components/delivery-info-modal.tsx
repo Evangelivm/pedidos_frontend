@@ -1,55 +1,69 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Truck, Clock, Phone, MapPin, Save } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Truck, Clock, Phone, MapPin, Save } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 interface DeliveryInfoModalProps {
-  orderId: string
-  isOpen: boolean
-  onClose: () => void
+  orderId: string;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export function DeliveryInfoModal({ orderId, isOpen, onClose }: DeliveryInfoModalProps) {
-  const { toast } = useToast()
+export function DeliveryInfoModal({
+  orderId,
+  isOpen,
+  onClose,
+}: DeliveryInfoModalProps) {
+  const { toast } = useToast();
   const [deliveryInfo, setDeliveryInfo] = useState({
     address: "",
     phone: "",
     departureTime: new Date().toISOString().slice(0, 16),
     notes: "",
-  })
+  });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setDeliveryInfo((prev) => ({ ...prev, [name]: value }))
-  }
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setDeliveryInfo((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleSave = () => {
     // In a real app, you would save this to a database
     // For this demo, we'll save to localStorage
 
-    const existingDeliveries = JSON.parse(localStorage.getItem("deliveries") || "{}")
+    const existingDeliveries = JSON.parse(
+      localStorage.getItem("deliveries") || "{}"
+    );
 
     existingDeliveries[orderId] = {
       ...deliveryInfo,
       createdAt: new Date().toISOString(),
-    }
+    };
 
-    localStorage.setItem("deliveries", JSON.stringify(existingDeliveries))
+    localStorage.setItem("deliveries", JSON.stringify(existingDeliveries));
 
     toast({
       title: "Información de entrega guardada",
       description: "Los datos de entrega han sido guardados correctamente.",
-    })
+    });
 
-    onClose()
-  }
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -57,7 +71,7 @@ export function DeliveryInfoModal({ orderId, isOpen, onClose }: DeliveryInfoModa
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Truck className="h-5 w-5" />
-            Información de Entrega - Pedido #{orderId.slice(0, 8)}
+            Información de Entrega - Pedido #{orderId}
           </DialogTitle>
         </DialogHeader>
 
@@ -119,12 +133,15 @@ export function DeliveryInfoModal({ orderId, isOpen, onClose }: DeliveryInfoModa
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
+          <Button
+            onClick={handleSave}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
             <Save className="h-4 w-4 mr-2" />
             Guardar Información
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

@@ -27,7 +27,6 @@ import { Switch } from "@/components/ui/switch";
 import { connections } from "@/data/connections";
 import { Producto, Pedido, DetallePedido } from "@/data/connections";
 
-// Category and presentation mappings
 const CATEGORIES = {
   1: "Abarrotes",
   2: "Trigos, harinas y hojuelas",
@@ -68,6 +67,7 @@ type CartItem = {
 };
 
 interface ShoppingCartOrderFormProps {
+  id?: number;
   orderId?: string;
   initialCart?: CartItem[];
   paymentMethod?: string;
@@ -105,7 +105,7 @@ const CartItem = memo(
         <div className="flex gap-3">
           <div className="relative h-20 w-20 flex-shrink-0 bg-gray-100 rounded">
             <Image
-              src={item.imagen || "/faraon.png"}
+              src={item.imagen || "/abarrote.webp"}
               alt={item.descripcion}
               fill
               className="object-contain p-1"
@@ -206,6 +206,7 @@ const CartItem = memo(
 );
 
 export function ShoppingCartOrderForm({
+  id,
   orderId,
   initialCart = [],
   paymentMethod = "efectivo",
@@ -213,31 +214,8 @@ export function ShoppingCartOrderForm({
 }: ShoppingCartOrderFormProps) {
   const router = useRouter();
   const { toast } = useToast();
-
-  // Cargar carrito desde localStorage si existe
-  const getInitialCart = () => {
-    const savedCart = localStorage.getItem("cart");
-    return savedCart ? JSON.parse(savedCart) : initialCart;
-  };
-
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-    const savedCart = localStorage.getItem("cart");
-    if (savedCart) {
-      try {
-        const parsedCart = JSON.parse(savedCart);
-        setCart(parsedCart);
-      } catch (e) {
-        console.error("Error parsing cart from localStorage", e);
-        setCart(initialCart);
-      }
-    } else {
-      setCart(initialCart);
-    }
-  }, [initialCart]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
@@ -245,10 +223,31 @@ export function ShoppingCartOrderForm({
   const [selectedPointOfSale, setSelectedPointOfSale] = useState(pointOfSale);
   const [products, setProducts] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [clientId, setClientId] = useState<number>(1);
   const isEditing = !!orderId;
 
-  // Guardar carrito en localStorage cada vez que cambie
+  useEffect(() => {
+    setIsClient(true);
+
+    // Priorizar initialCart si estamos editando
+    if (isEditing && initialCart.length > 0) {
+      setCart(initialCart);
+    } else {
+      // Si no es edición, intentar cargar del localStorage
+      const savedCart = localStorage.getItem("cart");
+      if (savedCart) {
+        try {
+          const parsedCart = JSON.parse(savedCart);
+          setCart(parsedCart);
+        } catch (e) {
+          console.error("Error parsing cart", e);
+          setCart(initialCart);
+        }
+      } else {
+        setCart(initialCart);
+      }
+    }
+  }, [initialCart, isEditing]);
+
   useEffect(() => {
     if (isClient) {
       localStorage.setItem("cart", JSON.stringify(cart));
@@ -285,7 +284,6 @@ export function ShoppingCartOrderForm({
     fetchProducts();
   }, [toast]);
 
-  // Product map for faster access
   const productMap = useMemo(() => {
     return Object.fromEntries(products.map((p) => [p.id, p]));
   }, [products]);
@@ -320,10 +318,7 @@ export function ShoppingCartOrderForm({
             ? {
                 ...item,
                 quantity: item.quantity + 1,
-                discountEnabled:
-                  item.discountEnabled !== undefined
-                    ? item.discountEnabled
-                    : false,
+                discountEnabled: item.discountEnabled ?? false,
               }
             : item
         )
@@ -343,9 +338,9 @@ export function ShoppingCartOrderForm({
           id: product.id,
           codigo: product.codigo,
           descripcion: product.descripcion,
-          precio_sugerido: Number(product.precio_sugerido || 0),
-          precio_minimo: Number(product.precio_minimo || 0),
-          imagen: product.imagen || "",
+          precio_sugerido: product.precio_sugerido || 0,
+          precio_minimo: product.precio_minimo || 0,
+          imagen: product.imagen || "/abarrote.webp",
           quantity: 1,
           discountEnabled: false,
           categoria_id: product.categoria_id,
@@ -378,10 +373,7 @@ export function ShoppingCartOrderForm({
           ? {
               ...item,
               quantity: newQuantity,
-              discountEnabled:
-                item.discountEnabled !== undefined
-                  ? item.discountEnabled
-                  : false,
+              discountEnabled: item.discountEnabled ?? false,
             }
           : item
       )
@@ -416,6 +408,7 @@ export function ShoppingCartOrderForm({
       const product = productMap[item.id];
       return product && product.stock < item.quantity;
     });
+
     if (productsWithoutStock.length > 0) {
       const productNames = productsWithoutStock
         .map((item) => item.descripcion)
@@ -427,8 +420,8 @@ export function ShoppingCartOrderForm({
       });
       return;
     }
+
     try {
-      // Prepare order details
       const detallesPedido: DetallePedido[] = cart.map((item) => ({
         producto_id: item.id,
         cantidad: item.quantity,
@@ -442,65 +435,72 @@ export function ShoppingCartOrderForm({
             : item.precio_sugerido) * item.quantity,
       }));
 
-      // Calculate subtotal (sum of all item subtotals)
       const subtotal = detallesPedido.reduce(
         (sum, item) => sum + item.subtotal,
         0
       );
-
-      // Calculate IGV (18% of subtotal)
       const igv = subtotal * 0.18;
-
-      // Calculate total (subtotal + IGV)
       const total = subtotal + igv;
 
-      function generarNumeroPedidoConFecha(): string {
-        const ahora = new Date();
-        const fecha = [
-          ahora.getFullYear().toString().slice(-2), // Año (2 dígitos)
-          String(ahora.getMonth() + 1).padStart(2, "0"), // Mes (2 dígitos)
-          String(ahora.getDate()).padStart(2, "0"), // Día (2 dígitos)
-        ].join("");
-
-        // Caracteres posibles (números y letras mayúsculas)
-        const caracteres = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        let randomPart = "";
-
-        // Generar 4 caracteres aleatorios
-        for (let i = 0; i < 4; i++) {
-          randomPart += caracteres.charAt(
-            Math.floor(Math.random() * caracteres.length)
-          );
-        }
-
-        return `PED-${fecha}-${randomPart}`;
-      }
-
-      // Prepare the order data
-      const pedidoData: Omit<Pedido, "id"> = {
-        cliente_id: clientId,
+      const pedidoData: Partial<Pedido> = {
         subtotal: subtotal,
         igv: igv,
         total: total,
-        estado: "PENDIENTE",
         notas: `Método de pago: ${selectedPaymentMethod}, Punto de venta: ${selectedPointOfSale}`,
         detalle: detallesPedido,
-        numero: generarNumeroPedidoConFecha(),
-        fecha: new Date(),
       };
 
-      // Create the order
-      // const response = await connections.pedidos.create(pedidoData);
-      console.log(pedidoData);
-      toast({
-        title: isEditing ? "Pedido actualizado" : "Pedido creado",
-        description: isEditing
-          ? `El pedido #${orderId} ha sido actualizado correctamente.`
-          : "El pedido ha sido creado correctamente.",
-      });
-      localStorage.removeItem("cart"); // Limpiar carrito guardado
+      if (isEditing && id) {
+        // Ahora verificamos el id numérico en lugar de orderId
+        // Actualizar pedido existente usando el ID numérico
+        await connections.pedidos.update(id, pedidoData);
+        localStorage.removeItem("cart");
+        //console.log(pedidoData);
+        toast({
+          title: "Pedido actualizado",
+          description: `El pedido #${orderId} ha sido actualizado correctamente.`,
+        });
+      } else {
+        // Crear nuevo pedido
+        function generarNumeroPedidoConFecha(): string {
+          const ahora = new Date();
+          const fecha = [
+            ahora.getFullYear().toString().slice(-2),
+            String(ahora.getMonth() + 1).padStart(2, "0"),
+            String(ahora.getDate()).padStart(2, "0"),
+          ].join("");
+
+          const caracteres = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+          let randomPart = "";
+
+          for (let i = 0; i < 4; i++) {
+            randomPart += caracteres.charAt(
+              Math.floor(Math.random() * caracteres.length)
+            );
+          }
+
+          return `PED-${fecha}-${randomPart}`;
+        }
+
+        const newPedidoData: Omit<Pedido, "id"> = {
+          ...pedidoData,
+          cliente_id: 1, // Asumiendo cliente por defecto
+          numero: generarNumeroPedidoConFecha(),
+          fecha: new Date(),
+          estado: "PENDIENTE",
+        } as Omit<Pedido, "id">;
+
+        const response = await connections.pedidos.create(newPedidoData);
+        toast({
+          title: "Pedido creado",
+          description: "El pedido ha sido creado correctamente.",
+        });
+      }
+
+      localStorage.removeItem("cart");
       router.push("/");
     } catch (error) {
+      console.error("Error al procesar el pedido:", error);
       toast({
         title: "Error",
         description: "Ha ocurrido un error al procesar el pedido",
@@ -510,7 +510,7 @@ export function ShoppingCartOrderForm({
   };
 
   const handleCancelOrder = () => {
-    localStorage.removeItem("cart"); // Limpiar carrito guardado
+    localStorage.removeItem("cart");
     router.push("/");
   };
 
@@ -564,7 +564,7 @@ export function ShoppingCartOrderForm({
             <Card key={product.id} className="overflow-hidden">
               <div className="relative h-24 bg-gray-100">
                 <Image
-                  src={product.imagen || "/faraon.png"}
+                  src={product.imagen || "/abarrote.webp"}
                   alt={product.descripcion}
                   fill
                   className="object-contain p-2"

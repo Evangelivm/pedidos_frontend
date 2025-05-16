@@ -1,18 +1,35 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
-import { CalendarIcon, Plus, Trash2, Save, X } from "lucide-react"
-import { products } from "@/data/products"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+// import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { CalendarIcon, Plus, Trash2, Save, X } from "lucide-react";
+import { products } from "@/data/products";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,32 +38,34 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 
 interface MerchandiseEntryFormProps {
-  onComplete: () => void
+  onComplete: () => void;
 }
 
 interface EntryItem {
-  id: string
-  productId: string
-  productName: string
-  quantity: number
-  unitCost: number
-  total: number
+  id: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitCost: number;
+  total: number;
 }
 
-export function MerchandiseEntryForm({ onComplete }: MerchandiseEntryFormProps) {
-  const [date, setDate] = useState<Date>(new Date())
-  const [provider, setProvider] = useState("")
-  const [invoiceNumber, setInvoiceNumber] = useState("")
-  const [notes, setNotes] = useState("")
-  const [selectedProduct, setSelectedProduct] = useState("")
-  const [quantity, setQuantity] = useState(1)
-  const [unitCost, setUnitCost] = useState(0)
-  const [entryItems, setEntryItems] = useState<EntryItem[]>([])
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+export function MerchandiseEntryForm({
+  onComplete,
+}: MerchandiseEntryFormProps) {
+  const [date, setDate] = useState<Date>(new Date());
+  const [provider, setProvider] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [notes, setNotes] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [unitCost, setUnitCost] = useState(0);
+  const [entryItems, setEntryItems] = useState<EntryItem[]>([]);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Obtener proveedores (simulado)
   const providers = [
@@ -55,64 +74,68 @@ export function MerchandiseEntryForm({ onComplete }: MerchandiseEntryFormProps) 
     { id: "3", name: "Mayorista Express" },
     { id: "4", name: "Productos Industriales Perú" },
     { id: "5", name: "Comercial San Miguel" },
-  ]
+  ];
 
   // Actualizar costo unitario cuando se selecciona un producto
   useEffect(() => {
     if (selectedProduct) {
-      const product = products.find((p) => p.id === selectedProduct)
+      const product = products.find((p) => p.id.toString() === selectedProduct);
       if (product) {
-        setUnitCost(product.price * 0.7) // Costo estimado (70% del precio de venta)
+        setUnitCost(product.price * 0.7); // Costo estimado (70% del precio de venta)
       }
     } else {
-      setUnitCost(0)
+      setUnitCost(0);
     }
-  }, [selectedProduct])
+  }, [selectedProduct]);
 
   const handleAddItem = () => {
-    if (!selectedProduct || quantity <= 0 || unitCost <= 0) return
+    if (!selectedProduct || quantity <= 0 || unitCost <= 0) return;
 
-    const product = products.find((p) => p.id === selectedProduct)
-    if (!product) return
+    const product = products.find((p) => p.id.toString() === selectedProduct);
+    if (!product) return;
 
     const newItem: EntryItem = {
       id: Date.now().toString(),
-      productId: product.id,
+      productId: product.id.toString(),
       productName: product.name,
       quantity,
       unitCost,
       total: quantity * unitCost,
-    }
+    };
 
-    setEntryItems([...entryItems, newItem])
-    setSelectedProduct("")
-    setQuantity(1)
-    setUnitCost(0)
-  }
+    setEntryItems([...entryItems, newItem]);
+    setSelectedProduct("");
+    setQuantity(1);
+    setUnitCost(0);
+  };
 
   const handleRemoveItem = (id: string) => {
-    setEntryItems(entryItems.filter((item) => item.id !== id))
-  }
+    setEntryItems(entryItems.filter((item) => item.id !== id));
+  };
 
   const calculateTotal = () => {
-    return entryItems.reduce((sum, item) => sum + item.total, 0)
-  }
+    return entryItems.reduce((sum, item) => sum + item.total, 0);
+  };
 
   const handleSubmit = async () => {
     if (entryItems.length === 0 || !provider || !invoiceNumber) {
-      alert("Por favor complete todos los campos requeridos y añada al menos un producto.")
-      return
+      alert(
+        "Por favor complete todos los campos requeridos y añada al menos un producto."
+      );
+      return;
     }
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     try {
       // Aquí iría la lógica para guardar en la base de datos
       // Simulamos una operación asíncrona
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Guardar en localStorage para simular persistencia
-      const entries = JSON.parse(localStorage.getItem("merchandiseEntries") || "[]")
+      const entries = JSON.parse(
+        localStorage.getItem("merchandiseEntries") || "[]"
+      );
       const newEntry = {
         id: Date.now().toString(),
         date,
@@ -122,40 +145,42 @@ export function MerchandiseEntryForm({ onComplete }: MerchandiseEntryFormProps) 
         items: entryItems,
         total: calculateTotal(),
         createdAt: new Date().toISOString(),
-      }
+      };
 
-      entries.push(newEntry)
-      localStorage.setItem("merchandiseEntries", JSON.stringify(entries))
+      entries.push(newEntry);
+      localStorage.setItem("merchandiseEntries", JSON.stringify(entries));
 
-      setShowConfirmDialog(true)
+      setShowConfirmDialog(true);
     } catch (error) {
-      console.error("Error al guardar la entrada:", error)
-      alert("Ocurrió un error al guardar la entrada de mercadería.")
+      console.error("Error al guardar la entrada:", error);
+      alert("Ocurrió un error al guardar la entrada de mercadería.");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const handleConfirmComplete = () => {
-    setShowConfirmDialog(false)
-    resetForm()
-    onComplete()
-  }
+    setShowConfirmDialog(false);
+    resetForm();
+    onComplete();
+  };
 
   const resetForm = () => {
-    setDate(new Date())
-    setProvider("")
-    setInvoiceNumber("")
-    setNotes("")
-    setSelectedProduct("")
-    setQuantity(1)
-    setUnitCost(0)
-    setEntryItems([])
-  }
+    setDate(new Date());
+    setProvider("");
+    setInvoiceNumber("");
+    setNotes("");
+    setSelectedProduct("");
+    setQuantity(1);
+    setUnitCost(0);
+    setEntryItems([]);
+  };
 
   return (
     <div className="bg-white rounded-lg border p-6">
-      <h2 className="text-xl font-semibold mb-6">Registrar Nueva Entrada de Mercadería</h2>
+      <h2 className="text-xl font-semibold mb-6">
+        Registrar Nueva Entrada de Mercadería
+      </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {/* Fecha */}
@@ -163,19 +188,24 @@ export function MerchandiseEntryForm({ onComplete }: MerchandiseEntryFormProps) 
           <Label htmlFor="date">Fecha de Entrada</Label>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-start text-left font-normal">
+              <Button
+                variant="outline"
+                className="w-full justify-start text-left font-normal"
+              >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, "PPP", { locale: es }) : "Seleccionar fecha"}
+                {date
+                  ? format(date, "PPP", { locale: es })
+                  : "Seleccionar fecha"}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
-              <Calendar
+              {/* <Calendar
                 mode="single"
                 selected={date}
                 onSelect={(date) => date && setDate(date)}
                 initialFocus
                 locale={es}
-              />
+              /> */}
             </PopoverContent>
           </Popover>
         </div>
@@ -222,7 +252,7 @@ export function MerchandiseEntryForm({ onComplete }: MerchandiseEntryFormProps) 
               </SelectTrigger>
               <SelectContent>
                 {products.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
+                  <SelectItem key={p.id} value={p.id.toString()}>
                     {p.name}
                   </SelectItem>
                 ))}
@@ -238,7 +268,9 @@ export function MerchandiseEntryForm({ onComplete }: MerchandiseEntryFormProps) 
               type="number"
               min="1"
               value={quantity}
-              onChange={(e) => setQuantity(Number.parseInt(e.target.value) || 0)}
+              onChange={(e) =>
+                setQuantity(Number.parseInt(e.target.value) || 0)
+              }
             />
           </div>
 
@@ -251,7 +283,9 @@ export function MerchandiseEntryForm({ onComplete }: MerchandiseEntryFormProps) 
               min="0"
               step="0.01"
               value={unitCost}
-              onChange={(e) => setUnitCost(Number.parseFloat(e.target.value) || 0)}
+              onChange={(e) =>
+                setUnitCost(Number.parseFloat(e.target.value) || 0)
+              }
             />
           </div>
         </div>
@@ -281,9 +315,15 @@ export function MerchandiseEntryForm({ onComplete }: MerchandiseEntryFormProps) 
                 {entryItems.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell>{item.productName}</TableCell>
-                    <TableCell className="text-right">{item.quantity}</TableCell>
-                    <TableCell className="text-right">S/ {item.unitCost.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-medium">S/ {item.total.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">
+                      {item.quantity}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      S/ {item.unitCost.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      S/ {item.total.toFixed(2)}
+                    </TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"
@@ -300,7 +340,9 @@ export function MerchandiseEntryForm({ onComplete }: MerchandiseEntryFormProps) 
                   <TableCell colSpan={3} className="text-right font-bold">
                     Total:
                   </TableCell>
-                  <TableCell className="text-right font-bold">S/ {calculateTotal().toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-bold">
+                    S/ {calculateTotal().toFixed(2)}
+                  </TableCell>
                   <TableCell></TableCell>
                 </TableRow>
               </TableBody>
@@ -341,15 +383,18 @@ export function MerchandiseEntryForm({ onComplete }: MerchandiseEntryFormProps) 
           <AlertDialogHeader>
             <AlertDialogTitle>Entrada registrada con éxito</AlertDialogTitle>
             <AlertDialogDescription>
-              La entrada de mercadería ha sido registrada correctamente en el sistema. El inventario ha sido actualizado
-              con las nuevas cantidades.
+              La entrada de mercadería ha sido registrada correctamente en el
+              sistema. El inventario ha sido actualizado con las nuevas
+              cantidades.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={handleConfirmComplete}>Aceptar</AlertDialogAction>
+            <AlertDialogAction onClick={handleConfirmComplete}>
+              Aceptar
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }

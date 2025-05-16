@@ -1,83 +1,102 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { TopBar } from "@/components/top-bar"
-import { SearchBar } from "@/components/search-bar"
-import { DispatchesTable } from "@/components/dispatches-table"
-import { Button } from "@/components/ui/button"
-import { Download, Filter, Truck, X, Calendar, MapPin, TruckIcon, User } from "lucide-react"
-import { exportDispatchesToExcel } from "@/lib/export-utils"
-import { useToast } from "@/components/ui/use-toast"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
-import { cn } from "@/lib/utils"
+import { useState, useEffect } from "react";
+import { TopBar } from "@/components/top-bar";
+import { SearchBar } from "@/components/search-bar";
+import { DispatchesTable } from "@/components/dispatches-table";
+import { Button } from "@/components/ui/button";
+import {
+  Download,
+  Filter,
+  Truck,
+  X,
+  Calendar,
+  MapPin,
+  TruckIcon,
+  User,
+} from "lucide-react";
+import { exportDispatchesToExcel } from "@/lib/export-utils";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+// import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 export default function DispatchesPage() {
-  const [dispatches, setDispatches] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const { toast } = useToast()
+  const [dispatches, setDispatches] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   // Estado para controlar la visibilidad del panel de filtros
-  const [showFilters, setShowFilters] = useState(false)
+  const [showFilters, setShowFilters] = useState(false);
 
   // Estados para los filtros
-  const [statusFilter, setStatusFilter] = useState("")
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined)
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined)
-  const [zoneFilter, setZoneFilter] = useState("")
-  const [deliveryTypeFilter, setDeliveryTypeFilter] = useState("")
-  const [courierFilter, setCourierFilter] = useState("")
+  const [statusFilter, setStatusFilter] = useState("");
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [zoneFilter, setZoneFilter] = useState("");
+  const [deliveryTypeFilter, setDeliveryTypeFilter] = useState("");
+  const [courierFilter, setCourierFilter] = useState("");
 
   // Contador de filtros activos
   const getActiveFiltersCount = () => {
-    let count = 0
-    if (statusFilter) count++
-    if (startDate) count++
-    if (endDate) count++
-    if (zoneFilter) count++
-    if (deliveryTypeFilter) count++
-    if (courierFilter) count++
-    return count
-  }
+    let count = 0;
+    if (statusFilter) count++;
+    if (startDate) count++;
+    if (endDate) count++;
+    if (zoneFilter) count++;
+    if (deliveryTypeFilter) count++;
+    if (courierFilter) count++;
+    return count;
+  };
 
   // Limpiar todos los filtros
   const clearAllFilters = () => {
-    setStatusFilter("")
-    setStartDate(undefined)
-    setEndDate(undefined)
-    setZoneFilter("")
-    setDeliveryTypeFilter("")
-    setCourierFilter("")
-  }
+    setStatusFilter("");
+    setStartDate(undefined);
+    setEndDate(undefined);
+    setZoneFilter("");
+    setDeliveryTypeFilter("");
+    setCourierFilter("");
+  };
 
   // Aplicar filtros
   const applyFilters = () => {
     toast({
       title: "Filtros aplicados",
       description: `Se han aplicado ${getActiveFiltersCount()} filtros a los despachos.`,
-    })
-    setShowFilters(false)
-  }
+    });
+    setShowFilters(false);
+  };
 
   useEffect(() => {
     // Load dispatches from localStorage
-    const storedDispatches = localStorage.getItem("dispatches")
+    const storedDispatches = localStorage.getItem("dispatches");
     if (storedDispatches) {
-      const dispatchesObj = JSON.parse(storedDispatches)
+      const dispatchesObj = JSON.parse(storedDispatches);
       // Convert object to array
       const dispatchesArray = Object.keys(dispatchesObj).map((key) => ({
         ...dispatchesObj[key],
         id: key,
-      }))
-      setDispatches(dispatchesArray)
+      }));
+      setDispatches(dispatchesArray);
     }
-    setLoading(false)
-  }, [])
+    setLoading(false);
+  }, []);
 
   // Handle export to Excel
   const handleExportToExcel = () => {
@@ -87,27 +106,28 @@ export default function DispatchesPage() {
           title: "No hay datos para exportar",
           description: "No hay despachos disponibles para exportar.",
           variant: "destructive",
-        })
-        return
+        });
+        return;
       }
 
       // Exportar los despachos
-      exportDispatchesToExcel(dispatches)
+      exportDispatchesToExcel(dispatches);
 
       toast({
         title: "Exportación exitosa",
         description: `Se han exportado ${dispatches.length} despachos a Excel.`,
-      })
+      });
     } catch (error) {
-      console.error("Error al exportar a Excel:", error)
+      console.error("Error al exportar a Excel:", error);
 
       toast({
         title: "Error de exportación",
-        description: "No se pudieron exportar los despachos. Inténtelo de nuevo.",
+        description:
+          "No se pudieron exportar los despachos. Inténtelo de nuevo.",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   return (
     <main className="min-h-screen flex flex-col bg-gray-50">
@@ -119,10 +139,16 @@ export default function DispatchesPage() {
               <Truck className="h-5 w-5 text-green-600" />
               Gestión de Despachos
             </h1>
-            <p className="text-gray-500 text-sm">Administre y realice seguimiento a todos sus despachos</p>
+            <p className="text-gray-500 text-sm">
+              Administre y realice seguimiento a todos sus despachos
+            </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" className="border-gray-300" onClick={handleExportToExcel}>
+            <Button
+              variant="outline"
+              className="border-gray-300"
+              onClick={handleExportToExcel}
+            >
               <Download className="h-4 w-4 mr-2" />
               Exportar XLS
             </Button>
@@ -136,19 +162,27 @@ export default function DispatchesPage() {
               variant={getActiveFiltersCount() > 0 ? "default" : "outline"}
               className={cn(
                 "whitespace-nowrap",
-                getActiveFiltersCount() > 0 ? "bg-blue-600 hover:bg-blue-700" : "border-gray-300",
+                getActiveFiltersCount() > 0
+                  ? "bg-blue-600 hover:bg-blue-700"
+                  : "border-gray-300"
               )}
               onClick={() => setShowFilters(!showFilters)}
             >
               <Filter className="h-4 w-4 mr-2" />
-              Filtros {getActiveFiltersCount() > 0 && `(${getActiveFiltersCount()})`}
+              Filtros{" "}
+              {getActiveFiltersCount() > 0 && `(${getActiveFiltersCount()})`}
             </Button>
 
             {showFilters && (
               <div className="absolute right-0 top-full mt-2 z-50 bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-[340px] sm:w-[500px] animate-in fade-in-0 zoom-in-95">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="font-medium text-lg">Filtros de Despachos</h3>
-                  <Button variant="ghost" size="sm" onClick={() => setShowFilters(false)} className="h-8 w-8 p-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowFilters(false)}
+                    className="h-8 w-8 p-0"
+                  >
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
@@ -156,13 +190,19 @@ export default function DispatchesPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   {/* Estado del despacho */}
                   <div>
-                    <Label htmlFor="status" className="flex items-center gap-2 mb-1.5">
+                    <Label
+                      htmlFor="status"
+                      className="flex items-center gap-2 mb-1.5"
+                    >
                       <div className="bg-orange-100 p-1 rounded-full">
                         <TruckIcon className="h-3.5 w-3.5 text-orange-600" />
                       </div>
                       Estado
                     </Label>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <Select
+                      value={statusFilter}
+                      onValueChange={setStatusFilter}
+                    >
                       <SelectTrigger id="status" className="w-full">
                         <SelectValue placeholder="Todos los estados" />
                       </SelectTrigger>
@@ -178,7 +218,10 @@ export default function DispatchesPage() {
 
                   {/* Zona de entrega */}
                   <div>
-                    <Label htmlFor="zone" className="flex items-center gap-2 mb-1.5">
+                    <Label
+                      htmlFor="zone"
+                      className="flex items-center gap-2 mb-1.5"
+                    >
                       <div className="bg-green-100 p-1 rounded-full">
                         <MapPin className="h-3.5 w-3.5 text-green-600" />
                       </div>
@@ -206,20 +249,22 @@ export default function DispatchesPage() {
                           variant="outline"
                           className={cn(
                             "w-full justify-start text-left font-normal",
-                            !startDate && "text-muted-foreground",
+                            !startDate && "text-muted-foreground"
                           )}
                         >
-                          {startDate ? format(startDate, "dd/MM/yyyy") : "Seleccionar fecha"}
+                          {startDate
+                            ? format(startDate, "dd/MM/yyyy")
+                            : "Seleccionar fecha"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
-                        <CalendarComponent
+                        {/* <CalendarComponent
                           mode="single"
                           selected={startDate}
                           onSelect={setStartDate}
                           initialFocus
                           locale={es}
-                        />
+                        /> */}
                       </PopoverContent>
                     </Popover>
                   </div>
@@ -238,33 +283,41 @@ export default function DispatchesPage() {
                           variant="outline"
                           className={cn(
                             "w-full justify-start text-left font-normal",
-                            !endDate && "text-muted-foreground",
+                            !endDate && "text-muted-foreground"
                           )}
                         >
-                          {endDate ? format(endDate, "dd/MM/yyyy") : "Seleccionar fecha"}
+                          {endDate
+                            ? format(endDate, "dd/MM/yyyy")
+                            : "Seleccionar fecha"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
-                        <CalendarComponent
+                        {/* <CalendarComponent
                           mode="single"
                           selected={endDate}
                           onSelect={setEndDate}
                           initialFocus
                           locale={es}
-                        />
+                        /> */}
                       </PopoverContent>
                     </Popover>
                   </div>
 
                   {/* Tipo de entrega */}
                   <div>
-                    <Label htmlFor="deliveryType" className="flex items-center gap-2 mb-1.5">
+                    <Label
+                      htmlFor="deliveryType"
+                      className="flex items-center gap-2 mb-1.5"
+                    >
                       <div className="bg-purple-100 p-1 rounded-full">
                         <TruckIcon className="h-3.5 w-3.5 text-purple-600" />
                       </div>
                       Tipo de entrega
                     </Label>
-                    <Select value={deliveryTypeFilter} onValueChange={setDeliveryTypeFilter}>
+                    <Select
+                      value={deliveryTypeFilter}
+                      onValueChange={setDeliveryTypeFilter}
+                    >
                       <SelectTrigger id="deliveryType" className="w-full">
                         <SelectValue placeholder="Todos los tipos" />
                       </SelectTrigger>
@@ -279,7 +332,10 @@ export default function DispatchesPage() {
 
                   {/* Repartidor */}
                   <div>
-                    <Label htmlFor="courier" className="flex items-center gap-2 mb-1.5">
+                    <Label
+                      htmlFor="courier"
+                      className="flex items-center gap-2 mb-1.5"
+                    >
                       <div className="bg-red-100 p-1 rounded-full">
                         <User className="h-3.5 w-3.5 text-red-600" />
                       </div>
@@ -317,5 +373,5 @@ export default function DispatchesPage() {
         </div>
       </div>
     </main>
-  )
+  );
 }

@@ -67,10 +67,10 @@ export default function CashRegisterPage() {
             id: order.id,
             type: "income",
             date: order.paymentDetails.date,
-            description: `Pago de pedido #${order.id.slice(0, 8)}`,
+            description: `Pago de pedido #${order.numero}`,
             customerName:
               order.paymentDetails.customerName ||
-              `Cliente de Pedido #${order.id.slice(0, 8)}`,
+              `Cliente de Pedido #${order.numero}`,
             amount: order.paymentDetails.totalPaid || 0,
             paymentMethod: getPaymentMethodsDescription(order.paymentDetails),
             details: {
@@ -474,7 +474,8 @@ export default function CashRegisterPage() {
               <DatePicker
                 date={selectedDate}
                 onDateChange={(date) => {
-                  setSelectedDate(date);
+                  const newDate = date || new Date();
+                  setSelectedDate(newDate);
                   // Recargar datos cuando cambia la fecha
                   setLoading(true);
                   setTimeout(() => loadData(), 100);

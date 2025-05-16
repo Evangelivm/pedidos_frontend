@@ -92,36 +92,36 @@ export function TopBar() {
       icon: <Package className="h-5 w-5" />,
       label: "Productos",
     },
-    {
-      path: "/despachos",
-      icon: <Truck className="h-5 w-5" />,
-      label: "Despachos",
-    },
-    {
-      path: "/pagos",
-      icon: <CreditCard className="h-5 w-5" />,
-      label: "Pagos",
-    },
-    {
-      path: "/caja-chica",
-      icon: <DollarSign className="h-5 w-5" />,
-      label: "Caja Chica",
-    },
-    {
-      path: "/proveedores",
-      icon: <Building className="h-5 w-5" />,
-      label: "Proveedores",
-    },
-    {
-      path: "/clientes",
-      icon: <Users className="h-5 w-5" />,
-      label: "Clientes",
-    },
-    {
-      path: "/entrada-mercaderia",
-      icon: <PackageCheck className="h-5 w-5" />,
-      label: "Entrada Mercadería",
-    },
+    // {
+    //   path: "/despachos",
+    //   icon: <Truck className="h-5 w-5" />,
+    //   label: "Despachos",
+    // },
+    // {
+    //   path: "/pagos",
+    //   icon: <CreditCard className="h-5 w-5" />,
+    //   label: "Pagos",
+    // },
+    // {
+    //   path: "/caja-chica",
+    //   icon: <DollarSign className="h-5 w-5" />,
+    //   label: "Caja Chica",
+    // },
+    // {
+    //   path: "/proveedores",
+    //   icon: <Building className="h-5 w-5" />,
+    //   label: "Proveedores",
+    // },
+    // {
+    //   path: "/clientes",
+    //   icon: <Users className="h-5 w-5" />,
+    //   label: "Clientes",
+    // },
+    // {
+    //   path: "/entrada-mercaderia",
+    //   icon: <PackageCheck className="h-5 w-5" />,
+    //   label: "Entrada Mercadería",
+    // },
   ];
 
   return (

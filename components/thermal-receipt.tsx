@@ -1,47 +1,55 @@
-import React from "react"
-import { formatCurrency } from "@/lib/utils"
+import React from "react";
+import { formatCurrency } from "@/lib/utils";
 
 interface ThermalReceiptProps {
   order: {
-    id: string
+    id: string;
+    numero: string;
     items: Array<{
-      id: number
-      name: string
-      price: number
-      quantity: number
-    }>
-    total: number
-    paymentMethod: string
-    date: string
-  }
+      id: number;
+      name: string;
+      price: number;
+      quantity: number;
+      unit: string;
+    }>;
+    total: number;
+    paymentMethod: string;
+    created_at: string;
+  };
 }
 
-export const ThermalReceipt = React.forwardRef<HTMLDivElement, ThermalReceiptProps>(({ order }, ref) => {
+export const ThermalReceipt = React.forwardRef<
+  HTMLDivElement,
+  ThermalReceiptProps
+>(({ order }, ref) => {
   // Format date
-  const formattedDate = new Date(order.date).toLocaleDateString()
-  const formattedTime = new Date(order.date).toLocaleTimeString()
+  const formattedDate = new Date(order.created_at).toLocaleDateString();
+  const formattedTime = new Date(order.created_at).toLocaleTimeString();
 
   // Get payment method display name
   const getPaymentMethod = (method: string) => {
     switch (method) {
       case "efectivo":
-        return "EFECTIVO"
+        return "EFECTIVO";
       case "tarjeta":
-        return "TARJETA DE CRÉDITO"
+        return "TARJETA DE CRÉDITO";
       case "transferencia":
-        return "TRANSFERENCIA BANCARIA"
+        return "TRANSFERENCIA BANCARIA";
       default:
-        return method.toUpperCase()
+        return method.toUpperCase();
     }
-  }
+  };
 
   // Calculate total (without tax)
-  const total = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const total = order.items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
 
   // Generate a simple text-based barcode representation
-  const generateTextBarcode = () => {
-    return "||||| |||| ||| |||| |||"
-  }
+  // const generateTextBarcode = () => {
+  //   return "||||| |||| ||| |||| |||";
+  // };
 
   return (
     <div
@@ -60,58 +68,130 @@ export const ThermalReceipt = React.forwardRef<HTMLDivElement, ThermalReceiptPro
       }}
     >
       <div style={{ textAlign: "center", marginBottom: "8px" }}>
-        <div style={{ fontWeight: "bolder" }}>TIENDA ACME</div>
-        <div>Av. Principal 123, Ciudad</div>
-        <div>Tel: 123-456789</div>
+        <div style={{ fontWeight: "bolder" }}>
+          {process.env.NEXT_PUBLIC_NOMBRE_EMPRESA}
+        </div>
+        <div>{process.env.NEXT_PUBLIC_DIRECCION_EMPRESA}</div>
+        <div>Tel: {process.env.NEXT_PUBLIC_TELEFONO_EMPRESA}</div>
       </div>
 
-      <div style={{ textAlign: "center", margin: "8px 0" }}>{Array(75).fill("-").join("")}</div>
+      <div style={{ textAlign: "center", margin: "8px 0" }}>
+        {Array(69).fill("-").join("")}
+      </div>
 
-      <div style={{ textAlign: "center", fontWeight: "bolder", marginBottom: "8px" }}>
+      <div
+        style={{
+          textAlign: "center",
+          fontWeight: "bolder",
+          marginBottom: "8px",
+        }}
+      >
         {getPaymentMethod(order.paymentMethod)}
       </div>
 
       <div style={{ marginBottom: "8px" }}>
-        <div>Fecha: {formattedDate}</div>
-        <div>Hora: {formattedTime}</div>
-        <div>Pedido #: {order.id.slice(0, 8)}</div>
+        <div>
+          <b>Fecha:</b> {formattedDate}
+        </div>
+        <div>
+          <b>Hora:</b> {formattedTime}
+        </div>
+        <div>
+          <b>Pedido:</b> {order.numero}
+        </div>
       </div>
 
-      <div style={{ textAlign: "center", margin: "8px 0" }}>{Array(75).fill("-").join("")}</div>
+      <div style={{ textAlign: "center", margin: "8px 0" }}>
+        {Array(69).fill("-").join("")}
+      </div>
 
       <div style={{ marginBottom: "8px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span style={{ fontWeight: "bolder" }}>Descripción</span>
-          <span style={{ fontWeight: "bolder" }}>Precio</span>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: "4px",
+          }}
+        >
+          <span style={{ fontWeight: "bolder", flex: 2 }}>Descripción</span>
+          <span style={{ fontWeight: "bolder", textAlign: "center", flex: 1 }}>
+            Cant.
+          </span>
+          <span style={{ fontWeight: "bolder", textAlign: "center", flex: 1 }}>
+            Unid.
+          </span>
+          <span style={{ fontWeight: "bolder", textAlign: "right", flex: 1 }}>
+            Precio
+          </span>
         </div>
+
         {order.items.map((item) => (
-          <div key={item.id} style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {item.name.length > 20 ? item.name.substring(0, 17) + "..." : item.name}
-              {item.quantity > 1 ? ` x${item.quantity}` : ""}
+          <div
+            key={item.id}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "12px", // 👈 Aquí agregamos el espacio
+            }}
+          >
+            <span
+              style={{ flex: 2, maxWidth: "200px", wordBreak: "break-word" }}
+            >
+              {item.name.match(/.{1,17}/g)?.map((chunk, i) => (
+                <span key={i}>
+                  {chunk}
+                  <br />
+                </span>
+              ))}
             </span>
-            <span>{formatCurrency(item.price * item.quantity)}</span>
+
+            <span style={{ flex: 1, textAlign: "center" }}>
+              {item.quantity}
+            </span>
+            <span style={{ flex: 1, textAlign: "center" }}>{item.unit}</span>
+            <span style={{ flex: 1, textAlign: "right" }}>
+              {formatCurrency(item.price * item.quantity)}
+            </span>
           </div>
         ))}
       </div>
 
-      <div style={{ textAlign: "center", margin: "8px 0" }}>{Array(75).fill("-").join("")}</div>
+      <div style={{ textAlign: "center", margin: "8px 0" }}>
+        {Array(69).fill("-").join("")}
+      </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bolder" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          fontWeight: "bolder",
+        }}
+      >
         <span>Total</span>
         <span>{formatCurrency(total)}</span>
       </div>
 
-      <div style={{ textAlign: "center", margin: "8px 0" }}>{Array(75).fill("-").join("")}</div>
-
-      <div style={{ textAlign: "center", fontWeight: "bolder", marginBottom: "8px" }}>¡GRACIAS POR SU COMPRA!</div>
-
       <div style={{ textAlign: "center", margin: "8px 0" }}>
+        {Array(69).fill("-").join("")}
+      </div>
+
+      <div
+        style={{
+          textAlign: "center",
+          fontWeight: "bolder",
+          marginBottom: "8px",
+        }}
+      >
+        ¡GRACIAS POR SU COMPRA!
+      </div>
+
+      {/* <div style={{ textAlign: "center", margin: "8px 0" }}>
         <div>{generateTextBarcode()}</div>
         <div>{order.id}</div>
-      </div>
+      </div> */}
     </div>
-  )
-})
+  );
+});
 
-ThermalReceipt.displayName = "ThermalReceipt"
+ThermalReceipt.displayName = "ThermalReceipt";

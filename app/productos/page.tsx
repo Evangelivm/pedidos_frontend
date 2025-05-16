@@ -342,7 +342,7 @@ export default function ProductsPage() {
               precio_minimo: p.precio_minimo ?? 0, // default value if undefined
               stock: p.stock,
               stock_minimo: p.stock_minimo,
-              imagen: p.imagen ?? "", // default value if undefined
+              imagen: p.imagen ?? "/abarrote.webp", // default value if undefined
               activo: p.activo,
             }))}
             onProductDeleted={(id: number | void) => {

@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
+import { connections } from "@/data/connections"; // Importamos connections
 
 interface Product {
   id: number;
@@ -49,30 +50,24 @@ export function ProductsGrid({
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!productToDelete) return;
 
     try {
-      // Get current products from localStorage
-      const storedProducts = localStorage.getItem("products");
-      if (storedProducts) {
-        const currentProducts = JSON.parse(storedProducts);
-        // Filter out the product to delete
-        const updatedProducts = currentProducts.filter(
-          (p: Product) => p.id !== productToDelete.id
-        );
-        // Save back to localStorage
-        localStorage.setItem("products", JSON.stringify(updatedProducts));
+      // Llamamos a la API para eliminar el producto
+      await connections.productos.delete(productToDelete.id);
 
-        toast({
-          title: "Producto eliminado",
-          description: `El producto "${productToDelete.descripcion}" ha sido eliminado correctamente.`,
-        });
+      toast({
+        title: "Producto eliminado",
+        description: `El producto "${productToDelete.descripcion}" ha sido eliminado correctamente.`,
+      });
 
-        // Notify parent component
-        if (onProductDeleted) {
-          onProductDeleted();
-        }
+      // Recargar la página para actualizar los datos
+      window.location.reload();
+
+      // Notificar al padre si existe un callback
+      if (onProductDeleted) {
+        onProductDeleted();
       }
     } catch (error) {
       toast({
