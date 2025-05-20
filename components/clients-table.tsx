@@ -105,7 +105,8 @@ export function ClientsTable({
     setIsViewModalOpen(true);
   };
 
-  const formatDate = (date: Date | string): string => {
+  const formatDate = (date: Date | string | undefined): string => {
+    if (!date) return "Fecha no disponible";
     const dateObj = typeof date === "string" ? new Date(date) : date;
     if (isNaN(dateObj.getTime())) return "Fecha inválida";
     return dateObj.toLocaleDateString("es-ES", {

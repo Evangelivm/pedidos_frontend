@@ -19,7 +19,7 @@ interface Cliente {
   email: string;
   direccion: string;
   activo: boolean;
-  created_at: Date;
+  created_at?: Date;
   notas?: string;
 }
 
