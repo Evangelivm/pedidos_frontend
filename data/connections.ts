@@ -13,13 +13,14 @@ interface PaginationParams {
 interface Cliente {
   id: number;
   nombre: string;
-  tipo_documento: "DNI" | "RUC" | "CE" | "PASAPORTE";
+  tipo_documento: string;
   numero_documento: string;
-  direccion?: string;
-  telefono?: string;
-  email?: string;
-  notas?: string;
+  telefono: string;
+  email: string;
+  direccion: string;
   activo: boolean;
+  created_at: Date;
+  notas?: string;
 }
 
 interface Producto {

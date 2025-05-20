@@ -288,9 +288,9 @@ export default function NewProductPage() {
                       className="border-green-200 focus:border-green-400"
                       required
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    {/* <p className="text-xs text-gray-500 mt-1">
                       Aplicable desde 5 unidades
-                    </p>
+                    </p> */}
                   </div>
                 </div>
 

@@ -112,11 +112,11 @@ export function TopBar() {
     //   icon: <Building className="h-5 w-5" />,
     //   label: "Proveedores",
     // },
-    // {
-    //   path: "/clientes",
-    //   icon: <Users className="h-5 w-5" />,
-    //   label: "Clientes",
-    // },
+    {
+      path: "/clientes",
+      icon: <Users className="h-5 w-5" />,
+      label: "Clientes",
+    },
     // {
     //   path: "/entrada-mercaderia",
     //   icon: <PackageCheck className="h-5 w-5" />,

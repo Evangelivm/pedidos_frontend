@@ -1,7 +1,5 @@
 "use client";
-
 import type React from "react";
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -31,14 +29,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface Client {
-  id: string;
-  name: string;
-  ruc: string;
-  phone: string;
-  email: string;
-  address: string;
-}
+// Importamos Cliente y connections
+import connections, { Cliente } from "@/data/connections";
 
 interface PaymentModalProps {
   order: any;
@@ -54,19 +46,22 @@ export function PaymentModal({
   onPaymentComplete,
 }: PaymentModalProps) {
   const { toast } = useToast();
+
   const [paymentInfo, setPaymentInfo] = useState({
     cash: "0.00",
     yape: "0.00",
     transfer: "0.00",
-    customerName: `Cliente de Pedido #${order?.id || ""}`,
+    customerName: `Cliente de Ped. ${order?.numero || ""}`,
     customerPhone: "",
     clientId: "",
   });
+
   const [totalPaid, setTotalPaid] = useState(0);
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
-  const [clients, setClients] = useState<Client[]>([]);
+  const [clients, setClients] = useState<Cliente[]>([]);
+  const [loadingClients, setLoadingClients] = useState(true);
 
-  // Cargar clientes y actualizar fecha/hora
+  // Cargar clientes desde la API
   useEffect(() => {
     if (isOpen) {
       setCurrentDateTime(new Date());
@@ -74,22 +69,34 @@ export function PaymentModal({
     }
   }, [isOpen]);
 
-  // Cargar clientes desde localStorage
-  const loadClients = () => {
+  const loadClients = async () => {
     try {
-      const storedClients = localStorage.getItem("clients");
-      if (storedClients) {
-        setClients(JSON.parse(storedClients));
+      setLoadingClients(true);
+      const response = await connections.clientes.getAll({
+        page: 1,
+        limit: 100,
+        orderBy: "nombre",
+        orderDirection: "asc",
+      });
+
+      if (response.data && Array.isArray(response.data.items)) {
+        setClients(response.data.items);
       } else {
         setClients([]);
       }
     } catch (error) {
       console.error("Error al cargar clientes:", error);
-      setClients([]);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los clientes.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingClients(false);
     }
   };
 
-  // Calculate total paid amount
+  // Calcular total pagado
   useEffect(() => {
     const cash = Number.parseFloat(paymentInfo.cash) || 0;
     const yape = Number.parseFloat(paymentInfo.yape) || 0;
@@ -100,9 +107,8 @@ export function PaymentModal({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
-    // For numeric fields, validate input
+    // Validar campos numéricos
     if (name === "cash" || name === "yape" || name === "transfer") {
-      // Allow empty string, numbers, and decimal point
       if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
         setPaymentInfo((prev) => ({ ...prev, [name]: value }));
       }
@@ -113,28 +119,32 @@ export function PaymentModal({
 
   // Manejar selección de cliente
   const handleClientSelect = (clientId: string) => {
-    const selectedClient = clients.find((client) => client.id === clientId);
+    const selectedClient = clients.find(
+      (client) => client.id.toString() === clientId
+    );
 
     if (selectedClient) {
       setPaymentInfo((prev) => ({
         ...prev,
         clientId: clientId,
-        customerName: selectedClient.name,
-        customerPhone: selectedClient.phone || "",
+        customerName: selectedClient.nombre,
+        customerPhone: selectedClient.telefono || "",
       }));
     }
   };
 
-  // Agrupar clientes por tipo (con RUC o sin RUC)
+  // Agrupar clientes por tipo
   const clientsWithRUC = clients.filter(
-    (client) => client.ruc && client.ruc.trim() !== ""
+    (client) =>
+      client.tipo_documento === "RUC" && client.numero_documento.trim() !== ""
   );
   const clientsWithoutRUC = clients.filter(
-    (client) => !client.ruc || client.ruc.trim() === ""
+    (client) =>
+      !["RUC", "Pasaporte", "CE"].includes(client.tipo_documento) ||
+      !client.numero_documento.trim()
   );
 
   const handleCompletePayment = () => {
-    // Validate if total paid matches or exceeds order total
     if (totalPaid < order.total) {
       toast({
         title: "Error en el pago",
@@ -146,10 +156,7 @@ export function PaymentModal({
     }
 
     try {
-      // Get existing orders from localStorage
       const storedOrders = JSON.parse(localStorage.getItem("orders") || "[]");
-
-      // Update the order's payment status
       const updatedOrders = storedOrders.map((o: any) => {
         if (o.id === order.id) {
           return {
@@ -170,15 +177,12 @@ export function PaymentModal({
         return o;
       });
 
-      // Save updated orders back to localStorage
       localStorage.setItem("orders", JSON.stringify(updatedOrders));
-
       toast({
         title: "Pago completado",
         description: `El pago del pedido #${order.id} ha sido registrado correctamente.`,
       });
 
-      // Notify parent component
       onPaymentComplete();
       onClose();
     } catch (error) {
@@ -190,11 +194,15 @@ export function PaymentModal({
     }
   };
 
-  // Format date
-  const formattedDate = currentDateTime.toLocaleDateString();
+  // Formatear fecha y hora
+  const formattedDate = currentDateTime.toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
   const formattedTime = currentDateTime.toLocaleTimeString();
 
-  // Calculate change
+  // Calcular vuelto
   const change = Math.max(0, totalPaid - order.total);
 
   return (
@@ -203,22 +211,22 @@ export function PaymentModal({
         <DialogHeader className="sticky top-0 bg-white z-10 pb-2">
           <DialogTitle className="flex items-center gap-2 text-xl">
             <CreditCard className="h-5 w-5 text-green-600" />
-            Pago - #{order?.id}
+            Pago - {order?.numero}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-3 py-1">
-          <div className="bg-gray-50 p-2 rounded-md text-sm grid grid-cols-2 gap-1">
+          <div className="bg-gray-50 p-2 rounded-md text-sm grid grid-cols-1 gap-1">
             <div className="flex justify-between">
-              <span className="font-medium">Fecha:</span>
+              <span className="font-bold">Fecha:</span>
               <span>{formattedDate}</span>
             </div>
             <div className="flex justify-between">
-              <span className="font-medium">Hora:</span>
+              <span className="font-bold">Hora:</span>
               <span>{formattedTime}</span>
             </div>
-            <div className="col-span-2 flex justify-between">
-              <span className="font-medium">Total:</span>
+            <div className="flex justify-between">
+              <span className="font-bold">Total:</span>
               <span className="font-bold text-blue-700">S/.{order?.total}</span>
             </div>
           </div>
@@ -236,12 +244,17 @@ export function PaymentModal({
                   <SelectValue placeholder="Seleccionar cliente" />
                 </SelectTrigger>
                 <SelectContent>
-                  {clients.length === 0 ? (
+                  {loadingClients ? (
                     <div className="py-2 text-center text-sm text-gray-500">
-                      No hay clientes
+                      Cargando clientes...
+                    </div>
+                  ) : clients.length === 0 ? (
+                    <div className="py-2 text-center text-sm text-gray-500">
+                      No hay clientes disponibles
                     </div>
                   ) : (
                     <>
+                      {/* Grupo de Empresas (con RUC) */}
                       {clientsWithRUC.length > 0 && (
                         <SelectGroup>
                           <SelectLabel className="flex items-center gap-1 text-xs">
@@ -250,15 +263,15 @@ export function PaymentModal({
                           {clientsWithRUC.map((client) => (
                             <SelectItem
                               key={client.id}
-                              value={client.id}
+                              value={client.id.toString()}
                               className="py-1.5 pl-6 pr-2 text-sm"
                             >
                               <div className="flex flex-col">
                                 <span className="font-medium">
-                                  {client.name}
+                                  {client.nombre}
                                 </span>
                                 <span className="text-xs text-blue-600">
-                                  RUC: {client.ruc}
+                                  RUC: {client.numero_documento}
                                 </span>
                               </div>
                             </SelectItem>
@@ -266,18 +279,21 @@ export function PaymentModal({
                         </SelectGroup>
                       )}
 
+                      {/* Grupo de Personas (sin RUC) */}
                       {clientsWithoutRUC.length > 0 && (
                         <SelectGroup>
-                          <SelectLabel className="flex items-center gap-1 text-xs">
+                          {/* <SelectLabel className="flex items-center gap-1 text-xs">
                             <User className="h-3 w-3" /> Personas
-                          </SelectLabel>
+                          </SelectLabel> */}
                           {clientsWithoutRUC.map((client) => (
                             <SelectItem
                               key={client.id}
-                              value={client.id}
+                              value={client.id.toString()}
                               className="py-1.5 pl-6 pr-2 text-sm"
                             >
-                              <span className="font-medium">{client.name}</span>
+                              <span className="font-medium">
+                                {client.nombre}
+                              </span>
                             </SelectItem>
                           ))}
                         </SelectGroup>
@@ -319,7 +335,6 @@ export function PaymentModal({
 
           <div className="border-t pt-2 mt-2">
             <h3 className="font-medium text-sm mb-2">Métodos de Pago</h3>
-
             <div className="grid grid-cols-1 gap-2">
               <div>
                 <Label
@@ -395,10 +410,9 @@ export function PaymentModal({
                   totalPaid >= order?.total ? "text-green-600" : "text-red-600"
                 }
               >
-                S/.{totalPaid}
+                S/.{totalPaid.toFixed(2)}
               </span>
             </div>
-
             {totalPaid > order?.total && (
               <div className="flex justify-between text-xs">
                 <span>Vuelto:</span>
@@ -407,13 +421,11 @@ export function PaymentModal({
                 </span>
               </div>
             )}
-
             {totalPaid < order?.total && (
               <div className="text-red-500 text-xs">
                 Falta S/.{(order?.total - totalPaid).toFixed(2)}
               </div>
             )}
-
             {totalPaid === order?.total && (
               <div className="text-green-600 text-xs font-medium">
                 ¡Monto exacto!

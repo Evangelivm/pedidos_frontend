@@ -93,11 +93,7 @@ export function PrintReceiptModal({
 
   // Calculate total sin impuestos
   const calculateTotal = (items: any[]) => {
-    return items.reduce(
-      (sum: number, item: any) =>
-        sum + (item.price || 0) * (item.quantity || 1),
-      0
-    );
+    return items.reduce((sum: number, item: any) => sum + (item.price || 0), 0);
   };
 
   // Filtrar order items basado en los seleccionados
@@ -344,7 +340,7 @@ export function PrintReceiptModal({
                         {item.quantity}
                       </div>
                       <div className="col-span-2 text-right">
-                        {formatCurrency(item.price * item.quantity)}
+                        {formatCurrency(item.price)}
                       </div>
                     </div>
                   ))}

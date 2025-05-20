@@ -1,168 +1,215 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
+import type { ChangeEvent, FormEvent } from "react";
+import { useState, useEffect } from "react";
+import { TopBar } from "@/components/top-bar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Save, Users } from "lucide-react";
+import Link from "next/link";
 
-import { useState, useEffect } from "react"
-import { TopBar } from "@/components/top-bar"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/components/ui/use-toast"
-import { useRouter } from "next/navigation"
-import { ArrowLeft, Save, Users } from "lucide-react"
-import Link from "next/link"
+// Importamos Cliente y connections
+import connections, { Cliente } from "@/data/connections";
 
 export default function NewClientPage() {
-  const { toast } = useToast()
-  const router = useRouter()
+  const { toast } = useToast();
+  const router = useRouter();
 
-  const [clientData, setClientData] = useState({
-    name: "",
-    ruc: "",
-    type: "Persona",
-    documentType: "DNI",
-    documentNumber: "",
-    phone: "",
+  // Estado inicial basado en la interfaz Cliente
+  const [clientData, setClientData] = useState<Partial<Cliente>>({
+    nombre: "",
+    tipo_documento: "DNI",
+    numero_documento: "",
+    telefono: "",
     email: "",
-    address: "",
-    notes: "",
-  })
+    direccion: "",
+    activo: true,
+    created_at: new Date(),
+    notas: "",
+  });
 
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
-  const [clientId, setClientId] = useState<string | null>(null)
+  const [initialData, setInitialData] = useState<Partial<Cliente>>({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [clientId, setClientId] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Cargar datos si estamos editando
   useEffect(() => {
-    // Verificar si estamos editando un cliente existente
-    const checkIfEditing = () => {
-      const searchParams = new URLSearchParams(window.location.search)
-      const id = searchParams.get("id")
+    const searchParams = new URLSearchParams(window.location.search);
+    const idParam = searchParams.get("id");
+    if (idParam) {
+      const id = parseInt(idParam, 10);
+      setIsEditing(true);
+      setClientId(id);
 
-      if (id) {
-        setClientId(id)
-        setIsEditing(true)
-
-        // Cargar datos del cliente
-        const storedClients = JSON.parse(localStorage.getItem("clients") || "[]")
-        const client = storedClients.find((c: any) => c.id === id)
-
-        if (client) {
+      connections.clientes
+        .getById(id)
+        .then((response) => {
+          const data = response.data;
           setClientData({
-            name: client.name || "",
-            ruc: client.ruc || "",
-            type: client.type || "Persona",
-            documentType: client.documentType || "DNI",
-            documentNumber: client.documentNumber || "",
-            phone: client.phone || "",
-            email: client.email || "",
-            address: client.address || "",
-            notes: client.notes || "",
-          })
-        }
-      }
+            ...data,
+            created_at: new Date(data.created_at),
+          });
+          setInitialData({
+            ...data,
+            created_at: new Date(data.created_at),
+          });
+        })
+        .catch((error) => {
+          console.error("Error al obtener cliente:", error);
+          toast({
+            title: "Error",
+            description: "No se pudo cargar la información del cliente.",
+            variant: "destructive",
+          });
+          router.push("/clientes");
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    } else {
+      setIsLoading(false);
     }
+  }, [router, toast]);
 
-    checkIfEditing()
-  }, [])
+  // Manejar cambios en inputs
+  const handleChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setClientData((prev) => ({ ...prev, [name]: value }));
+  };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setClientData((prev) => ({ ...prev, [name]: value }))
-  }
-
+  // Manejar cambio en selects
   const handleSelectChange = (name: string, value: string) => {
-    setClientData((prev) => ({ ...prev, [name]: value }))
-  }
+    setClientData((prev) => ({ ...prev, [name]: value }));
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
+  // Manejar estado activo/inactivo
+  const handleToggleStatus = (e: ChangeEvent<HTMLInputElement>) => {
+    const isActive = e.target.checked;
+    setClientData((prev) => ({ ...prev, activo: isActive }));
+  };
 
-    try {
-      // Validar campos requeridos
-      if (!clientData.name) {
-        throw new Error("Por favor complete el campo Nombre / Razón Social")
-      }
+  // Validación y envío
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
 
-      // Validar RUC si se proporciona
-      if (clientData.ruc && !/^\d{11}$/.test(clientData.ruc)) {
-        throw new Error("El RUC debe tener 11 dígitos numéricos")
-      }
-
-      // Validar formato de documento según tipo
-      if (
-        clientData.documentType === "DNI" &&
-        clientData.documentNumber &&
-        !/^\d{8}$/.test(clientData.documentNumber)
-      ) {
-        throw new Error("El DNI debe tener 8 dígitos numéricos")
-      }
-
-      if (
-        clientData.documentType === "RUC" &&
-        clientData.documentNumber &&
-        !/^\d{11}$/.test(clientData.documentNumber)
-      ) {
-        throw new Error("El RUC debe tener 11 dígitos numéricos")
-      }
-
-      // Validar formato de email si se proporciona
-      if (clientData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientData.email)) {
-        throw new Error("El formato del correo electrónico no es válido")
-      }
-
-      // Obtener clientes existentes
-      const storedClients = JSON.parse(localStorage.getItem("clients") || "[]")
-
-      if (isEditing && clientId) {
-        // Actualizar cliente existente
-        const updatedClients = storedClients.map((client: any) => {
-          if (client.id === clientId) {
-            return {
-              ...client,
-              ...clientData,
-              updatedAt: new Date().toISOString(),
-            }
-          }
-          return client
-        })
-
-        localStorage.setItem("clients", JSON.stringify(updatedClients))
-
-        toast({
-          title: "Cliente actualizado",
-          description: `El cliente "${clientData.name}" ha sido actualizado correctamente.`,
-        })
-      } else {
-        // Crear nuevo cliente
-        const newClient = {
-          id: `client-${Date.now()}`,
-          ...clientData,
-          status: "Activo",
-          createdAt: new Date().toISOString(),
-        }
-
-        localStorage.setItem("clients", JSON.stringify([...storedClients, newClient]))
-
-        toast({
-          title: "Cliente creado",
-          description: `El cliente "${clientData.name}" ha sido creado correctamente.`,
-        })
-      }
-
-      // Redireccionar a la lista de clientes
-      router.push("/clientes")
-    } catch (error) {
+    if (!clientData.nombre?.trim()) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Ha ocurrido un error al guardar el cliente",
+        description: "Por favor ingrese un nombre válido.",
         variant: "destructive",
-      })
-    } finally {
-      setIsSubmitting(false)
+      });
+      return;
     }
+
+    if (!clientData.numero_documento?.trim()) {
+      toast({
+        title: "Error",
+        description: "Por favor ingrese un número de documento válido.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validar DNI o RUC solo si fue modificado
+    if (
+      initialData.numero_documento !== clientData.numero_documento &&
+      clientData.numero_documento.trim()
+    ) {
+      if (
+        clientData.tipo_documento === "DNI" &&
+        clientData.numero_documento.length !== 8
+      ) {
+        toast({
+          title: "Formato inválido",
+          description: "El DNI debe tener 8 dígitos.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (
+        clientData.tipo_documento === "RUC" &&
+        clientData.numero_documento.length !== 11
+      ) {
+        toast({
+          title: "Formato inválido",
+          description: "El RUC debe tener 11 dígitos.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    // Validar correo solo si fue modificado
+    if (
+      initialData.email !== clientData.email &&
+      clientData.email?.trim() &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientData.email)
+    ) {
+      toast({
+        title: "Correo no válido",
+        description: "Por favor ingrese un correo electrónico válido.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      if (isEditing && clientId !== null) {
+        // Actualizar cliente existente
+        await connections.clientes.update(clientId, clientData);
+        toast({
+          title: "Cliente actualizado",
+          description: `"${clientData.nombre}" ha sido actualizado correctamente.`,
+        });
+      } else {
+        // Crear nuevo cliente
+        const createData = {
+          ...clientData,
+        } as Omit<Cliente, "id">;
+
+        const response = await connections.clientes.create(createData);
+        const newClient = response.data;
+        toast({
+          title: "Cliente creado",
+          description: `"${newClient.nombre}" ha sido agregado correctamente.`,
+        });
+      }
+
+      setTimeout(() => {
+        router.push("/clientes");
+      }, 500);
+    } catch (error) {
+      console.error("Error al guardar cliente:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo guardar el cliente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen flex items-center justify-center">
+        <p>Cargando información...</p>
+      </main>
+    );
   }
 
   return (
@@ -182,151 +229,138 @@ export default function NewClientPage() {
             </h1>
           </div>
         </div>
-
-        <div className="max-w-3xl mx-auto bg-white p-6 rounded-lg border">
+        <div className="max-w-3xl mx-auto bg-white p-6 rounded-lg border shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Información principal */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <Label htmlFor="name">Nombre / Razón Social *</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      value={clientData.name}
-                      onChange={handleChange}
-                      placeholder="Ej: Juan Pérez o Empresa S.A.C."
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="ruc">RUC</Label>
-                    <Input
-                      id="ruc"
-                      name="ruc"
-                      value={clientData.ruc}
-                      onChange={handleChange}
-                      placeholder="Ej: 20123456789"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      El RUC debe tener 11 dígitos. Para empresas comienza con 20
-                    </p>
-                  </div>
-                </div>
-
                 <div>
-                  <Label htmlFor="type">Tipo de Cliente *</Label>
-                  <Select value={clientData.type} onValueChange={(value) => handleSelectChange("type", value)}>
-                    <SelectTrigger id="type">
-                      <SelectValue placeholder="Seleccionar tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Persona">Persona Natural</SelectItem>
-                      <SelectItem value="Empresa">Empresa</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="nombre">Nombre / Razón Social *</Label>
+                  <Input
+                    id="nombre"
+                    name="nombre"
+                    value={clientData.nombre || ""}
+                    onChange={handleChange}
+                    placeholder="Ej: Juan Pérez o Empresa S.A.C."
+                    required
+                  />
                 </div>
-
                 <div>
-                  <Label htmlFor="documentType">Tipo de Documento</Label>
+                  <Label htmlFor="tipo_documento">Tipo de Documento</Label>
                   <Select
-                    value={clientData.documentType}
-                    onValueChange={(value) => handleSelectChange("documentType", value)}
+                    value={clientData.tipo_documento || "DNI"}
+                    onValueChange={(value) =>
+                      handleSelectChange("tipo_documento", value)
+                    }
                   >
-                    <SelectTrigger id="documentType">
+                    <SelectTrigger id="tipo_documento">
                       <SelectValue placeholder="Seleccionar tipo de documento" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="DNI">DNI</SelectItem>
-                      <SelectItem value="CE">Carnet de Extranjería</SelectItem>
+                      <SelectItem value="RUC">RUC</SelectItem>
                       <SelectItem value="Pasaporte">Pasaporte</SelectItem>
+                      <SelectItem value="CE">Carnet de Extranjería</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div>
-                  <Label htmlFor="documentNumber">Número de Documento</Label>
+                  <Label htmlFor="numero_documento">Número de Documento</Label>
                   <Input
-                    id="documentNumber"
-                    name="documentNumber"
-                    value={clientData.documentNumber}
+                    id="numero_documento"
+                    name="numero_documento"
+                    value={clientData.numero_documento || ""}
                     onChange={handleChange}
-                    placeholder={clientData.documentType === "DNI" ? "Ej: 45678912" : "Ej: AE123456"}
+                    placeholder={
+                      clientData.tipo_documento === "DNI"
+                        ? "Ej: 45678912"
+                        : "Ej: 20123456789"
+                    }
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    {clientData.documentType === "DNI" ? "El DNI debe tener 8 dígitos" : ""}
+                    {clientData.tipo_documento === "DNI"
+                      ? "El DNI debe tener 8 dígitos"
+                      : "El RUC debe tener 11 dígitos"}
                   </p>
                 </div>
               </div>
-
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="phone">Teléfono</Label>
+                  <Label htmlFor="telefono">Teléfono</Label>
                   <Input
-                    id="phone"
-                    name="phone"
-                    value={clientData.phone}
+                    id="telefono"
+                    name="telefono"
+                    value={clientData.telefono || ""}
                     onChange={handleChange}
                     placeholder="Ej: 999-888-777"
                   />
                 </div>
-
                 <div>
                   <Label htmlFor="email">Correo Electrónico</Label>
                   <Input
                     id="email"
                     name="email"
                     type="email"
-                    value={clientData.email}
+                    value={clientData.email || ""}
                     onChange={handleChange}
                     placeholder="Ej: cliente@example.com"
                   />
                 </div>
-
                 <div>
-                  <Label htmlFor="address">Dirección</Label>
+                  <Label htmlFor="direccion">Dirección</Label>
                   <Textarea
-                    id="address"
-                    name="address"
-                    value={clientData.address}
+                    id="direccion"
+                    name="direccion"
+                    value={clientData.direccion || ""}
                     onChange={handleChange}
                     placeholder="Ej: Av. Principal 123, Distrito, Ciudad"
                     className="h-20"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Incluya calle, número, distrito y ciudad para facilitar entregas
+                    Incluya calle, número, distrito y ciudad para facilitar
+                    entregas
                   </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="notes">Notas Adicionales</Label>
-                  <Textarea
-                    id="notes"
-                    name="notes"
-                    value={clientData.notes}
-                    onChange={handleChange}
-                    placeholder="Información adicional sobre el cliente..."
-                    className="h-24"
-                  />
                 </div>
               </div>
             </div>
-
+            <div>
+              <Label htmlFor="notas">Notas Adicionales</Label>
+              <Textarea
+                id="notas"
+                name="notas"
+                value={clientData.notas || ""}
+                onChange={handleChange}
+                placeholder="Información adicional sobre el cliente..."
+                className="h-24"
+              />
+            </div>
+            {/* Checkbox de estado activo/inactivo (solo en modo edición) */}
+            {isEditing && (
+              <div className="flex items-center space-x-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="activo"
+                  checked={clientData.activo ?? true}
+                  onChange={handleToggleStatus}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="activo">Activo</Label>
+              </div>
+            )}
             <div className="flex justify-end gap-2 pt-4 border-t">
               <Link href="/clientes">
                 <Button variant="outline" type="button">
                   Cancelar
                 </Button>
               </Link>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={isSubmitting}>
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
                 <Save className="h-4 w-4 mr-2" />
-                {isSubmitting ? "Guardando..." : isEditing ? "Actualizar Cliente" : "Guardar Cliente"}
+                {isEditing ? "Actualizar Cliente" : "Guardar Cliente"}
               </Button>
             </div>
           </form>
         </div>
       </div>
     </main>
-  )
+  );
 }

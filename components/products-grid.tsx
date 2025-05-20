@@ -164,9 +164,9 @@ export function ProductsGrid({
                         <p className="font-bold text-lg text-green-600">
                           S/.{product.precio_minimo.toFixed(2)}
                         </p>
-                        <span className="text-xs text-green-700">
+                        {/* <span className="text-xs text-green-700">
                           Desde 5 unidades
-                        </span>
+                        </span> */}
                       </div>
                     </div>
                   </div>

@@ -598,9 +598,9 @@ export function ShoppingCartOrderForm({
                       S/.{product.precio_minimo?.toFixed(2)}
                     </span>
                   </div>
-                  <div className="text-[10px] text-gray-500 text-right italic">
+                  {/* <div className="text-[10px] text-gray-500 text-right italic">
                     Desde 5 unidades
-                  </div>
+                  </div> */}
                 </div>
                 <div className="flex justify-between items-center mb-1">
                   <Badge

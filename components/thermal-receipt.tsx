@@ -41,15 +41,7 @@ export const ThermalReceipt = React.forwardRef<
   };
 
   // Calculate total (without tax)
-  const total = order.items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-
-  // Generate a simple text-based barcode representation
-  // const generateTextBarcode = () => {
-  //   return "||||| |||| ||| |||| |||";
-  // };
+  const total = order.items.reduce((sum, item) => sum + item.price, 0);
 
   return (
     <div
@@ -132,7 +124,7 @@ export const ThermalReceipt = React.forwardRef<
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "12px", // 👈 Aquí agregamos el espacio
+              marginBottom: "12px",
             }}
           >
             <span
@@ -151,7 +143,7 @@ export const ThermalReceipt = React.forwardRef<
             </span>
             <span style={{ flex: 1, textAlign: "center" }}>{item.unit}</span>
             <span style={{ flex: 1, textAlign: "right" }}>
-              {formatCurrency(item.price * item.quantity)}
+              {formatCurrency(item.price)}
             </span>
           </div>
         ))}
@@ -185,11 +177,6 @@ export const ThermalReceipt = React.forwardRef<
       >
         ¡GRACIAS POR SU COMPRA!
       </div>
-
-      {/* <div style={{ textAlign: "center", margin: "8px 0" }}>
-        <div>{generateTextBarcode()}</div>
-        <div>{order.id}</div>
-      </div> */}
     </div>
   );
 });

@@ -84,6 +84,7 @@ export default function OrdersPage() {
           limit: 100,
         });
         const response = data.data.items;
+        // console.log(response);
 
         if (response && Array.isArray(response)) {
           setOrders(response);
