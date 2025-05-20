@@ -1,5 +1,4 @@
 "use client";
-
 import type React from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useState, useEffect } from "react";
@@ -19,7 +18,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, Users } from "lucide-react";
 import Link from "next/link";
-
 // Importamos Cliente y connections
 import connections, { Cliente } from "@/data/connections";
 
@@ -53,7 +51,6 @@ export default function NewClientPage() {
       const id = parseInt(idParam, 10);
       setIsEditing(true);
       setClientId(id);
-
       connections.clientes
         .getById(id)
         .then((response) => {
@@ -116,7 +113,11 @@ export default function NewClientPage() {
       return;
     }
 
-    if (!clientData.numero_documento?.trim()) {
+    // Si no es 'SD', validar número de documento
+    if (
+      clientData.tipo_documento !== "SD" &&
+      !clientData.numero_documento?.trim()
+    ) {
       toast({
         title: "Error",
         description: "Por favor ingrese un número de documento válido.",
@@ -128,7 +129,7 @@ export default function NewClientPage() {
     // Validar DNI o RUC solo si fue modificado
     if (
       initialData.numero_documento !== clientData.numero_documento &&
-      clientData.numero_documento.trim()
+      clientData.numero_documento?.trim()
     ) {
       if (
         clientData.tipo_documento === "DNI" &&
@@ -141,7 +142,6 @@ export default function NewClientPage() {
         });
         return;
       }
-
       if (
         clientData.tipo_documento === "RUC" &&
         clientData.numero_documento.length !== 11
@@ -169,18 +169,25 @@ export default function NewClientPage() {
       return;
     }
 
+    const finalData = {
+      ...clientData,
+      numero_documento:
+        clientData.tipo_documento === "SD"
+          ? ""
+          : clientData.numero_documento || "",
+    };
+
     try {
       if (isEditing && clientId !== null) {
-        // Actualizar cliente existente
-        await connections.clientes.update(clientId, clientData);
+        await connections.clientes.update(clientId, finalData);
         toast({
           title: "Cliente actualizado",
-          description: `"${clientData.nombre}" ha sido actualizado correctamente.`,
+          description: `"${finalData.nombre}" ha sido actualizado correctamente.`,
         });
       } else {
-        // Crear nuevo cliente
         const createData = {
-          ...clientData,
+          ...finalData,
+          created_at: new Date(),
         } as Omit<Cliente, "id">;
 
         const response = await connections.clientes.create(createData);
@@ -261,6 +268,7 @@ export default function NewClientPage() {
                       <SelectItem value="RUC">RUC</SelectItem>
                       <SelectItem value="Pasaporte">Pasaporte</SelectItem>
                       <SelectItem value="CE">Carnet de Extranjería</SelectItem>
+                      <SelectItem value="SD">Sin Documento</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -274,13 +282,22 @@ export default function NewClientPage() {
                     placeholder={
                       clientData.tipo_documento === "DNI"
                         ? "Ej: 45678912"
-                        : "Ej: 20123456789"
+                        : clientData.tipo_documento === "RUC"
+                        ? "Ej: 20123456789"
+                        : clientData.tipo_documento === "SD"
+                        ? "No es necesario"
+                        : "Campo opcional"
                     }
+                    disabled={clientData.tipo_documento === "SD"}
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     {clientData.tipo_documento === "DNI"
                       ? "El DNI debe tener 8 dígitos"
-                      : "El RUC debe tener 11 dígitos"}
+                      : clientData.tipo_documento === "RUC"
+                      ? "El RUC debe tener 11 dígitos"
+                      : clientData.tipo_documento === "SD"
+                      ? "Este cliente no requiere documento"
+                      : "Campo opcional"}
                   </p>
                 </div>
               </div>
@@ -334,6 +351,7 @@ export default function NewClientPage() {
                 className="h-24"
               />
             </div>
+
             {/* Checkbox de estado activo/inactivo (solo en modo edición) */}
             {isEditing && (
               <div className="flex items-center space-x-2 pt-2">
@@ -347,6 +365,7 @@ export default function NewClientPage() {
                 <Label htmlFor="activo">Activo</Label>
               </div>
             )}
+
             <div className="flex justify-end gap-2 pt-4 border-t">
               <Link href="/clientes">
                 <Button variant="outline" type="button">

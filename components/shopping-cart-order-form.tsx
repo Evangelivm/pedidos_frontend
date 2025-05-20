@@ -94,7 +94,7 @@ const CartItem = memo(
     }, [item]);
 
     const savings = useMemo(() => {
-      if (item.discountEnabled && item.quantity >= 5) {
+      if (item.discountEnabled && item.quantity >= 2) {
         return (item.precio_sugerido - item.precio_minimo) * item.quantity;
       }
       return 0;
@@ -137,7 +137,7 @@ const CartItem = memo(
                 </span>
               </div>
               <div className="flex flex-col">
-                {item.discountEnabled && item.quantity >= 5 ? (
+                {item.discountEnabled && item.quantity >= 2 ? (
                   <>
                     <div className="flex items-center">
                       <Tag className="h-3 w-3 text-gray-400 mr-1" />

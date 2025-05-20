@@ -14,7 +14,7 @@ interface Cliente {
   id: number;
   nombre: string;
   tipo_documento: string;
-  numero_documento: string;
+  numero_documento: string | null;
   telefono: string;
   email: string;
   direccion: string;

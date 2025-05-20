@@ -188,10 +188,12 @@ export function ClientsTable({
                   <td className="p-3 font-medium">{client.nombre}</td>
                   <td className="p-3">
                     <span className="font-medium text-blue-700">
-                      {client.tipo_documento}
+                      {client.tipo_documento === "SD"
+                        ? "Sin Documento"
+                        : client.tipo_documento}
                     </span>
                   </td>
-                  <td className="p-3">{client.numero_documento}</td>
+                  <td className="p-3">{client.numero_documento || "-"}</td>
                   <td className="p-3">{client.telefono || "-"}</td>
                   <td className="p-3">{client.email || "-"}</td>
                   <td className="p-3">{client.direccion || "-"}</td>
