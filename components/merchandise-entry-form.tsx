@@ -232,7 +232,7 @@ export function MerchandiseEntryForm({
             value={provider}
             onChange={(e) => setProvider(e.target.value.toUpperCase())}
             placeholder="Nombre del proveedor"
-            style={{ textTransform: "uppercase" }}
+            // style={{ textTransform: "uppercase" }}
           />
         </div>
 
