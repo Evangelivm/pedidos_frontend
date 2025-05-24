@@ -15,6 +15,7 @@ interface ThermalReceiptProps {
     total: number;
     paymentMethod: string;
     created_at: string;
+    clientName: string;
   };
 }
 
@@ -90,6 +91,9 @@ export const ThermalReceipt = React.forwardRef<
         </div>
         <div>
           <b>Pedido:</b> {order.numero}
+        </div>
+        <div>
+          <b>Cliente:</b> {order.clientName}
         </div>
       </div>
 

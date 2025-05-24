@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-// import { Calendar } from "@/components/ui/calendar";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
@@ -21,7 +20,7 @@ import {
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { CalendarIcon, Plus, Trash2, Save, X } from "lucide-react";
-import { products } from "@/data/products";
+import connections from "@/data/connections"; // Conexión real a la API
 import {
   Table,
   TableBody,
@@ -44,13 +43,19 @@ interface MerchandiseEntryFormProps {
   onComplete: () => void;
 }
 
+interface ProductFromAPI {
+  id: number;
+  descripcion: string;
+  precio_minimo: string;
+}
+
 interface EntryItem {
   id: string;
-  productId: string;
-  productName: string;
-  quantity: number;
-  unitCost: number;
-  total: number;
+  producto_id: number;
+  descripcion: string;
+  cantidad: number;
+  precio_unitario: number;
+  subtotal: number;
 }
 
 export function MerchandiseEntryForm({
@@ -60,33 +65,44 @@ export function MerchandiseEntryForm({
   const [provider, setProvider] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [notes, setNotes] = useState("");
-  const [selectedProduct, setSelectedProduct] = useState("");
-  const [quantity, setQuantity] = useState(1);
-  const [unitCost, setUnitCost] = useState(0);
+  const [selectedProduct, setSelectedProduct] = useState<string>("");
+  const [quantity, setQuantity] = useState<number>(1);
+  const [unitCost, setUnitCost] = useState<number>(0);
   const [entryItems, setEntryItems] = useState<EntryItem[]>([]);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [products, setProducts] = useState<ProductFromAPI[]>([]);
 
-  // Obtener proveedores (simulado)
-  const providers = [
-    { id: "1", name: "Distribuidora Nacional S.A." },
-    { id: "2", name: "Importadora del Sur" },
-    { id: "3", name: "Mayorista Express" },
-    { id: "4", name: "Productos Industriales Perú" },
-    { id: "5", name: "Comercial San Miguel" },
-  ];
+  // Cargar productos desde la API
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const response = await connections.productos.getAll({
+          page: 1,
+          limit: 1000,
+        });
+        setProducts(response.data.items || []);
+      } catch (error) {
+        console.error("Error al cargar los productos:", error);
+        alert("No se pudieron cargar los productos.");
+      }
+    };
+
+    loadProducts();
+  }, []);
 
   // Actualizar costo unitario cuando se selecciona un producto
   useEffect(() => {
     if (selectedProduct) {
       const product = products.find((p) => p.id.toString() === selectedProduct);
       if (product) {
-        setUnitCost(product.price * 0.7); // Costo estimado (70% del precio de venta)
+        const precioMin = parseFloat(product.precio_minimo);
+        setUnitCost(isNaN(precioMin) ? 0 : precioMin);
       }
     } else {
       setUnitCost(0);
     }
-  }, [selectedProduct]);
+  }, [selectedProduct, products]);
 
   const handleAddItem = () => {
     if (!selectedProduct || quantity <= 0 || unitCost <= 0) return;
@@ -96,11 +112,11 @@ export function MerchandiseEntryForm({
 
     const newItem: EntryItem = {
       id: Date.now().toString(),
-      productId: product.id.toString(),
-      productName: product.name,
-      quantity,
-      unitCost,
-      total: quantity * unitCost,
+      producto_id: product.id,
+      descripcion: product.descripcion,
+      cantidad: quantity,
+      precio_unitario: unitCost,
+      subtotal: quantity * unitCost,
     };
 
     setEntryItems([...entryItems, newItem]);
@@ -114,10 +130,12 @@ export function MerchandiseEntryForm({
   };
 
   const calculateTotal = () => {
-    return entryItems.reduce((sum, item) => sum + item.total, 0);
+    return entryItems.reduce((sum, item) => sum + item.subtotal, 0);
   };
 
   const handleSubmit = async () => {
+    console.log("Guardando entrada...");
+
     if (entryItems.length === 0 || !provider || !invoiceNumber) {
       alert(
         "Por favor complete todos los campos requeridos y añada al menos un producto."
@@ -128,27 +146,24 @@ export function MerchandiseEntryForm({
     setIsSubmitting(true);
 
     try {
-      // Aquí iría la lógica para guardar en la base de datos
-      // Simulamos una operación asíncrona
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Guardar en localStorage para simular persistencia
-      const entries = JSON.parse(
-        localStorage.getItem("merchandiseEntries") || "[]"
-      );
-      const newEntry = {
-        id: Date.now().toString(),
-        date,
-        provider: providers.find((p) => p.id === provider)?.name || provider,
-        invoiceNumber,
-        notes,
-        items: entryItems,
+      const payload = {
+        fecha: date,
+        proveedor: provider.trim(),
+        numero_factura: invoiceNumber.trim(),
         total: calculateTotal(),
-        createdAt: new Date().toISOString(),
+        notas: notes.trim() || undefined, // ✅ Aquí corregimos: null → undefined
+        detalle: entryItems.map((item) => ({
+          producto_id: item.producto_id,
+          cantidad: item.cantidad,
+          precio_unitario: item.precio_unitario,
+          subtotal: item.subtotal,
+        })),
       };
 
-      entries.push(newEntry);
-      localStorage.setItem("merchandiseEntries", JSON.stringify(entries));
+      // Llamamos a la conexión para guardar en backend
+      const response = await connections.entradasMercaderia.create(payload);
+      // console.log(payload);
+      console.log("Entrada guardada exitosamente:", response);
 
       setShowConfirmDialog(true);
     } catch (error) {
@@ -181,7 +196,6 @@ export function MerchandiseEntryForm({
       <h2 className="text-xl font-semibold mb-6">
         Registrar Nueva Entrada de Mercadería
       </h2>
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {/* Fecha */}
         <div className="space-y-2">
@@ -199,13 +213,13 @@ export function MerchandiseEntryForm({
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
-              {/* <Calendar
+              <Calendar
                 mode="single"
                 selected={date}
                 onSelect={(date) => date && setDate(date)}
                 initialFocus
                 locale={es}
-              /> */}
+              />
             </PopoverContent>
           </Popover>
         </div>
@@ -213,18 +227,13 @@ export function MerchandiseEntryForm({
         {/* Proveedor */}
         <div className="space-y-2">
           <Label htmlFor="provider">Proveedor</Label>
-          <Select value={provider} onValueChange={setProvider}>
-            <SelectTrigger>
-              <SelectValue placeholder="Seleccionar proveedor" />
-            </SelectTrigger>
-            <SelectContent>
-              {providers.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Input
+            id="provider"
+            value={provider}
+            onChange={(e) => setProvider(e.target.value.toUpperCase())}
+            placeholder="Nombre del proveedor"
+            style={{ textTransform: "uppercase" }}
+          />
         </div>
 
         {/* Número de Factura */}
@@ -241,7 +250,6 @@ export function MerchandiseEntryForm({
 
       <div className="border-t border-b py-6 my-6">
         <h3 className="text-lg font-medium mb-4">Detalle de Productos</h3>
-
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           {/* Producto */}
           <div className="space-y-2 md:col-span-2">
@@ -253,7 +261,7 @@ export function MerchandiseEntryForm({
               <SelectContent>
                 {products.map((p) => (
                   <SelectItem key={p.id} value={p.id.toString()}>
-                    {p.name}
+                    {p.descripcion}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -290,14 +298,28 @@ export function MerchandiseEntryForm({
           </div>
         </div>
 
-        <Button
-          onClick={handleAddItem}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
-          disabled={!selectedProduct || quantity <= 0 || unitCost <= 0}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Agregar Producto
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleAddItem}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+            disabled={!selectedProduct || quantity <= 0 || unitCost <= 0}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Agregar Producto
+          </Button>
+
+          <Button
+            onClick={() =>
+              (window.location.href =
+                process.env.NEXT_PUBLIC_PRODUCTS_NEW_URL ?? "")
+            }
+            variant="outline"
+            className="border-gray-300 text-gray-700 hover:bg-gray-100"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Nuevo Producto
+          </Button>
+        </div>
 
         {entryItems.length > 0 && (
           <div className="mt-6">
@@ -314,15 +336,15 @@ export function MerchandiseEntryForm({
               <TableBody>
                 {entryItems.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell>{item.productName}</TableCell>
+                    <TableCell>{item.descripcion}</TableCell>
                     <TableCell className="text-right">
-                      {item.quantity}
+                      {item.cantidad}
                     </TableCell>
                     <TableCell className="text-right">
-                      S/ {item.unitCost.toFixed(2)}
+                      S/ {item.precio_unitario.toFixed(2)}
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      S/ {item.total.toFixed(2)}
+                      S/ {item.subtotal.toFixed(2)}
                     </TableCell>
                     <TableCell>
                       <Button

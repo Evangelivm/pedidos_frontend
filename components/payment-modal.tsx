@@ -11,13 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  CreditCard,
-  DollarSign,
-  Smartphone,
-  CheckCircle,
-  User,
-} from "lucide-react";
+import { CreditCard, DollarSign, Smartphone, CheckCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import {
   Select,
@@ -28,9 +22,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
 // Importamos Cliente y connections
 import connections, { Cliente } from "@/data/connections";
+import { useRouter } from "next/navigation";
 
 interface PaymentModalProps {
   order: any;
@@ -45,8 +39,8 @@ export function PaymentModal({
   onClose,
   onPaymentComplete,
 }: PaymentModalProps) {
+  const router = useRouter();
   const { toast } = useToast();
-
   const [paymentInfo, setPaymentInfo] = useState({
     cash: "0.00",
     yape: "0.00",
@@ -55,7 +49,6 @@ export function PaymentModal({
     customerPhone: "",
     clientId: "",
   });
-
   const [totalPaid, setTotalPaid] = useState(0);
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [clients, setClients] = useState<Cliente[]>([]);
@@ -78,7 +71,6 @@ export function PaymentModal({
         orderBy: "nombre",
         orderDirection: "asc",
       });
-
       if (response.data && Array.isArray(response.data.items)) {
         setClients(response.data.items);
       } else {
@@ -106,7 +98,6 @@ export function PaymentModal({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-
     // Validar campos numéricos
     if (name === "cash" || name === "yape" || name === "transfer") {
       if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
@@ -122,13 +113,12 @@ export function PaymentModal({
     const selectedClient = clients.find(
       (client) => client.id.toString() === clientId
     );
-
     if (selectedClient) {
       setPaymentInfo((prev) => ({
         ...prev,
         clientId: clientId,
-        customerName: selectedClient.nombre,
-        customerPhone: selectedClient.telefono || "",
+        customerName: selectedClient!.nombre,
+        customerPhone: selectedClient!.telefono || "",
       }));
     }
   };
@@ -144,7 +134,7 @@ export function PaymentModal({
       !client.numero_documento.trim()
   );
 
-  const handleCompletePayment = () => {
+  const handleCompletePayment = async () => {
     if (totalPaid < order.total) {
       toast({
         title: "Error en el pago",
@@ -156,39 +146,64 @@ export function PaymentModal({
     }
 
     try {
-      const storedOrders = JSON.parse(localStorage.getItem("orders") || "[]");
-      const updatedOrders = storedOrders.map((o: any) => {
-        if (o.id === order.id) {
-          return {
-            ...o,
-            paymentStatus: "Pagado",
-            paymentDetails: {
-              date: currentDateTime.toISOString(),
-              cash: Number.parseFloat(paymentInfo.cash) || 0,
-              yape: Number.parseFloat(paymentInfo.yape) || 0,
-              transfer: Number.parseFloat(paymentInfo.transfer) || 0,
-              totalPaid: totalPaid,
-              customerName: paymentInfo.customerName,
-              customerPhone: paymentInfo.customerPhone,
-              clientId: paymentInfo.clientId,
-            },
-          };
-        }
-        return o;
-      });
+      const cashAmount = Number.parseFloat(paymentInfo.cash) || 0;
+      const yapeAmount = Number.parseFloat(paymentInfo.yape) || 0;
+      const transferAmount = Number.parseFloat(paymentInfo.transfer) || 0;
 
-      localStorage.setItem("orders", JSON.stringify(updatedOrders));
+      const paymentMethods = [];
+
+      if (cashAmount > 0) {
+        paymentMethods.push({
+          fecha: new Date(currentDateTime),
+          pedido_id: order.id,
+          metodo_pago: "EFECTIVO",
+          monto: cashAmount,
+        });
+      }
+
+      if (yapeAmount > 0) {
+        paymentMethods.push({
+          fecha: new Date(currentDateTime),
+          pedido_id: order.id,
+          metodo_pago: "YAPE",
+          monto: yapeAmount,
+        });
+      }
+
+      if (transferAmount > 0) {
+        paymentMethods.push({
+          fecha: new Date(currentDateTime),
+          pedido_id: order.id,
+          metodo_pago: "TRANSFERENCIA",
+          monto: transferAmount,
+        });
+      }
+
+      // Enviar cada pago individualmente
+      for (const pago of paymentMethods) {
+        await connections.pagos.create(pago);
+      }
+
+      // Actualizar cliente_id del pedido como número
+      if (paymentInfo.clientId) {
+        await connections.pedidos.updateClient(order.id, {
+          cliente_id: parseInt(paymentInfo.clientId),
+        });
+      }
+
+      // Mostrar mensaje de éxito
       toast({
-        title: "Pago completado",
-        description: `El pago del pedido #${order.id} ha sido registrado correctamente.`,
+        title: "Pago registrado",
+        description: `El pago del pedido #${order.id} ha sido guardado correctamente.`,
       });
 
       onPaymentComplete();
       onClose();
     } catch (error) {
+      console.error("Error al registrar pago:", error);
       toast({
         title: "Error",
-        description: "Ha ocurrido un error al procesar el pago.",
+        description: "Hubo un problema al guardar el pago.",
         variant: "destructive",
       });
     }
@@ -214,7 +229,6 @@ export function PaymentModal({
             Pago - {order?.numero}
           </DialogTitle>
         </DialogHeader>
-
         <div className="space-y-3 py-1">
           <div className="bg-gray-50 p-2 rounded-md text-sm grid grid-cols-1 gap-1">
             <div className="flex justify-between">
@@ -227,10 +241,11 @@ export function PaymentModal({
             </div>
             <div className="flex justify-between">
               <span className="font-bold">Total:</span>
-              <span className="font-bold text-blue-700">S/.{order?.total}</span>
+              <span className="font-bold text-blue-700">
+                S/.{order?.subtotal}
+              </span>
             </div>
           </div>
-
           <div className="grid grid-cols-1 gap-3">
             <div>
               <Label htmlFor="clientSelect" className="text-sm mb-1 block">
@@ -278,13 +293,9 @@ export function PaymentModal({
                           ))}
                         </SelectGroup>
                       )}
-
                       {/* Grupo de Personas (sin RUC) */}
                       {clientsWithoutRUC.length > 0 && (
                         <SelectGroup>
-                          {/* <SelectLabel className="flex items-center gap-1 text-xs">
-                            <User className="h-3 w-3" /> Personas
-                          </SelectLabel> */}
                           {clientsWithoutRUC.map((client) => (
                             <SelectItem
                               key={client.id}
@@ -303,7 +314,6 @@ export function PaymentModal({
                 </SelectContent>
               </Select>
             </div>
-
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label htmlFor="customerName" className="text-sm mb-1 block">
@@ -332,7 +342,6 @@ export function PaymentModal({
               </div>
             </div>
           </div>
-
           <div className="border-t pt-2 mt-2">
             <h3 className="font-medium text-sm mb-2">Métodos de Pago</h3>
             <div className="grid grid-cols-1 gap-2">
@@ -356,7 +365,6 @@ export function PaymentModal({
                   />
                 </div>
               </div>
-
               <div>
                 <Label
                   htmlFor="yape"
@@ -377,7 +385,6 @@ export function PaymentModal({
                   />
                 </div>
               </div>
-
               <div>
                 <Label
                   htmlFor="transfer"
@@ -401,19 +408,20 @@ export function PaymentModal({
               </div>
             </div>
           </div>
-
           <div className="bg-gray-50 p-2 rounded-md space-y-1 mt-2">
             <div className="flex justify-between text-base font-bold">
               <span>Total Pagado:</span>
               <span
                 className={
-                  totalPaid >= order?.total ? "text-green-600" : "text-red-600"
+                  totalPaid >= order?.subtotal
+                    ? "text-green-600"
+                    : "text-red-600"
                 }
               >
                 S/.{totalPaid.toFixed(2)}
               </span>
             </div>
-            {totalPaid > order?.total && (
+            {totalPaid > order?.subtotal && (
               <div className="flex justify-between text-xs">
                 <span>Vuelto:</span>
                 <span className="text-orange-600 font-medium">
@@ -421,19 +429,18 @@ export function PaymentModal({
                 </span>
               </div>
             )}
-            {totalPaid < order?.total && (
+            {totalPaid < order?.subtotal && (
               <div className="text-red-500 text-xs">
-                Falta S/.{(order?.total - totalPaid).toFixed(2)}
+                Falta S/.{(order?.subtotal - totalPaid).toFixed(2)}
               </div>
             )}
-            {totalPaid === order?.total && (
+            {totalPaid === order?.subtotal && (
               <div className="text-green-600 text-xs font-medium">
                 ¡Monto exacto!
               </div>
             )}
           </div>
         </div>
-
         <DialogFooter className="sticky bottom-0 bg-white pt-2 z-10">
           <Button variant="outline" onClick={onClose} size="sm">
             Cancelar
@@ -441,11 +448,11 @@ export function PaymentModal({
           <Button
             onClick={handleCompletePayment}
             className={`${
-              totalPaid >= order?.total
+              totalPaid >= order?.subtotal
                 ? "bg-green-600 hover:bg-green-700"
                 : "bg-gray-400 cursor-not-allowed"
             }`}
-            disabled={totalPaid < order?.total}
+            disabled={totalPaid < order?.subtotal}
             size="sm"
           >
             <CheckCircle className="h-3.5 w-3.5 mr-1" />

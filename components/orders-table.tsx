@@ -18,6 +18,7 @@ import { PaymentModal } from "@/components/payment-modal";
 import { Badge } from "@/components/ui/badge";
 import { connections } from "@/data/connections";
 
+// Interfaz actualizada con "PAGADO" incluido en 'estado'
 type Order = {
   id: number;
   numero: string;
@@ -40,20 +41,40 @@ type Order = {
     };
   }>;
   total: number;
+  subtotal: number;
   metodo_pago: string;
   punto_venta: string;
   created_at: string;
-  estado: "PENDIENTE" | "COMPLETADO" | "CANCELADO" | "EN_RUTA" | "ENTREGADO";
-  estado_pago: "PAGADO" | "PENDIENTE" | "CANCELADO";
+  estado:
+    | "PENDIENTE"
+    | "COMPLETADO"
+    | "CANCELADO"
+    | "EN_RUTA"
+    | "ENTREGADO"
+    | "PAGADO";
   clientes: {
     nombre: string;
   };
+  vendedores: {
+    nombre: string;
+  };
+  pagos: {
+    id: number;
+    pedido_id: number;
+    monto: string;
+    metodo_pago: string;
+  };
 };
 
-export default function OrdersTable({ orders }: { orders: Order[] }) {
+export default function OrdersTable({
+  orders,
+  onRefresh,
+}: {
+  orders: Order[];
+  onRefresh?: () => void;
+}) {
   const router = useRouter();
   const { toast } = useToast();
-
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const [printOrder, setPrintOrder] = useState<Order | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -86,19 +107,11 @@ export default function OrdersTable({ orders }: { orders: Order[] }) {
 
   const handleDeleteOrder = async (numero: string) => {
     try {
-      // Buscar el pedido por número para obtener su id
       const orderToDelete = orders.find((order) => order.numero === numero);
-      if (!orderToDelete) {
-        throw new Error("Pedido no encontrado");
-      }
-
-      // Llamar al endpoint de eliminación usando el ID del pedido
+      if (!orderToDelete) throw new Error("Pedido no encontrado");
       await connections.pedidos.delete(orderToDelete.id);
-
-      // Actualizar la lista local de pedidos
       const updatedOrders = orders.filter((order) => order.numero !== numero);
       setSelectedOrders(selectedOrders.filter((num) => num !== numero));
-
       toast({
         title: "Pedido eliminado",
         description: `El pedido #${numero} ha sido eliminado correctamente.`,
@@ -129,12 +142,7 @@ export default function OrdersTable({ orders }: { orders: Order[] }) {
 
   const handlePaymentComplete = async () => {
     try {
-      const response = await connections.pedidos.getAll({
-        page: 1,
-        limit: 100,
-      });
-
-      // No es necesario actualizar aquí porque `orders` viene desde afuera
+      if (onRefresh) onRefresh();
       toast({
         title: "Pago actualizado",
         description: "El estado del pago ha sido actualizado.",
@@ -144,46 +152,15 @@ export default function OrdersTable({ orders }: { orders: Order[] }) {
     }
   };
 
-  // Format date string
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString();
   };
 
-  // Get customer name
   const getCustomerName = (order: Order) => {
     return order.clientes?.nombre || `Cliente de Pedido #${order.numero}`;
   };
 
-  // Get seller name from point of sale
-  const getSellerName = (punto_venta: string) => {
-    switch (punto_venta) {
-      case "tienda1":
-        return "[42845079] Punto de Venta - Tienda 1";
-      case "tienda2":
-        return "[74563065] Punto de Venta - Tienda 2";
-      case "tienda3":
-        return "[45875037] Punto de Venta - Tienda 3";
-      default:
-        return punto_venta;
-    }
-  };
-
-  // Get payment method display name
-  const getPaymentMethod = (method: string) => {
-    switch (method) {
-      case "efectivo":
-        return "Contra Entrega Efectivo";
-      case "tarjeta":
-        return "Tarjeta de Crédito";
-      case "transferencia":
-        return "Transferencia Bancaria";
-      default:
-        return method;
-    }
-  };
-
-  // Get status badge
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "ENTREGADO":
@@ -199,7 +176,6 @@ export default function OrdersTable({ orders }: { orders: Order[] }) {
     }
   };
 
-  // Get payment status badge
   const getPaymentStatusBadge = (status: string) => {
     switch (status) {
       case "PAGADO":
@@ -227,12 +203,11 @@ export default function OrdersTable({ orders }: { orders: Order[] }) {
                   onCheckedChange={toggleSelectAll}
                 />
               </th>
-              <th className="p-3 w-10">#</th>
+              <th className="p-3 w-10">Código</th>
               <th className="p-3">Cliente</th>
               <th className="p-3">Vendedor</th>
-              <th className="p-3">Método de Pago</th>
+              <th className="p-3">Monto</th>
               <th className="p-3">Fecha</th>
-              <th className="p-3">Estado del pedido</th>
               <th className="p-3">Estado de Pago</th>
               <th className="p-3">Opciones</th>
             </tr>
@@ -271,13 +246,14 @@ export default function OrdersTable({ orders }: { orders: Order[] }) {
                   </td>
                   <td className="p-3 font-medium">{order.numero}</td>
                   <td className="p-3 font-medium">{getCustomerName(order)}</td>
-                  <td className="p-3">{getSellerName(order.punto_venta)}</td>
-                  <td className="p-3">{getPaymentMethod(order.metodo_pago)}</td>
-                  <td className="p-3">{formatDate(order.created_at)}</td>
-                  <td className="p-3">{getStatusBadge(order.estado)}</td>
+                  <td className="p-3">{order.vendedores.nombre}</td>
                   <td className="p-3">
-                    {getPaymentStatusBadge(order.estado_pago)}
+                    {order.subtotal
+                      ? `S/. ${Number(order.subtotal).toFixed(2)}`
+                      : "-"}
                   </td>
+                  <td className="p-3">{formatDate(order.created_at)}</td>
+                  <td className="p-3">{getPaymentStatusBadge(order.estado)}</td>
                   <td className="p-3">
                     <div className="flex flex-wrap gap-2">
                       <Button
@@ -307,25 +283,26 @@ export default function OrdersTable({ orders }: { orders: Order[] }) {
                       >
                         <Printer className="h-5 w-5" />
                       </Button>
-                      <Button
+                      {/* <Button
                         size="icon"
                         variant="ghost"
                         className={`${
-                          order.estado_pago === "PAGADO"
+                          order.estado === "PAGADO"
                             ? "btn-icon-success"
                             : "btn-icon-success opacity-50"
                         }`}
                         onClick={() => handleDispatchOrder(order)}
-                        disabled={order.estado_pago !== "PAGADO"}
+                        disabled={order.estado !== "PAGADO"}
                         title={
-                          order.estado_pago === "PAGADO"
+                          order.estado === "PAGADO"
                             ? "Gestionar Despacho"
                             : "Debe completar el pago antes de despachar"
                         }
                       >
                         <Truck className="h-5 w-5" />
-                      </Button>
-                      {order.estado_pago !== "PAGADO" && (
+                      </Button> */}
+
+                      {order.estado !== "PAGADO" && (
                         <Button
                           size="icon"
                           variant="ghost"
@@ -336,7 +313,8 @@ export default function OrdersTable({ orders }: { orders: Order[] }) {
                           <CreditCard className="h-5 w-5" />
                         </Button>
                       )}
-                      {order.estado_pago === "PAGADO" && (
+
+                      {order.estado === "PAGADO" && (
                         <Button
                           size="icon"
                           variant="ghost"

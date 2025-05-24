@@ -103,8 +103,8 @@ export function PrintReceiptModal({
     total: calculateTotal(
       orderItems.filter((item: any) => selectedItems.includes(item.id))
     ),
-    paymentMethod: order.metodo_pago || "EFECTIVO", // Valor por defecto
-    clientName: order.cliente?.nombre || "Consumidor final", // Valor por defecto
+    paymentMethod: order.metodo_pago || "DATOS", // Valor por defecto
+    clientName: order.clientes?.nombre || "Consumidor final", // Valor por defecto
   };
 
   // Manejar la impresión térmica
@@ -215,9 +215,9 @@ export function PrintReceiptModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className={showPreview ? "max-w-md" : "max-w-2xl"}>
+        <DialogContent className={showPreview ? "max-w-md" : "max-w-3xl"}>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-4">
               <Printer className="h-5 w-5 text-blue-600" />
               {showPreview
                 ? "Vista previa de impresión"

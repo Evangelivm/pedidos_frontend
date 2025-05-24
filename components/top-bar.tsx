@@ -117,11 +117,11 @@ export function TopBar() {
       icon: <Users className="h-5 w-5" />,
       label: "Clientes",
     },
-    // {
-    //   path: "/entrada-mercaderia",
-    //   icon: <PackageCheck className="h-5 w-5" />,
-    //   label: "Entrada Mercadería",
-    // },
+    {
+      path: "/entrada-mercaderia",
+      icon: <PackageCheck className="h-5 w-5" />,
+      label: "Entrada Mercadería",
+    },
   ];
 
   return (

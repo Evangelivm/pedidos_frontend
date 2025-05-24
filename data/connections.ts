@@ -14,7 +14,7 @@ interface Cliente {
   id: number;
   nombre: string;
   tipo_documento: string;
-  numero_documento: string | null;
+  numero_documento: string;
   telefono: string;
   email: string;
   direccion: string;
@@ -42,12 +42,17 @@ interface Pedido {
   numero: string;
   fecha: Date;
   cliente_id: number;
+  vendedor_id: number;
   subtotal: number;
   igv: number;
   total: number;
   estado: "PENDIENTE" | "COMPLETADO" | "CANCELADO";
   notas?: string;
   detalle: DetallePedido[];
+}
+
+interface PedidoCliente {
+  cliente_id: number;
 }
 
 interface DetallePedido {
@@ -71,7 +76,7 @@ interface Despacho {
 interface EntradaMercaderia {
   id: number;
   fecha: Date;
-  proveedor_id: number;
+  proveedor: string;
   numero_factura?: string;
   total: number;
   notas?: string;
@@ -83,6 +88,14 @@ interface DetalleEntradaMercaderia {
   cantidad: number;
   precio_unitario: number;
   subtotal: number;
+}
+
+interface Pago {
+  id: number;
+  pedido_id: number;
+  monto: number;
+  fecha: Date;
+  metodo_pago: string;
 }
 
 // API Client
@@ -129,6 +142,8 @@ export const connections = {
     create: (data: Omit<Pedido, "id">) => api.post("/pedidos", data),
     update: (id: number, data: Partial<Pedido>) =>
       api.put(`/pedidos/${id}`, data),
+    updateClient: (id: number, data: Partial<PedidoCliente>) =>
+      api.patch(`/pedidos/${id}`, data),
     delete: (id: number) => api.delete(`/pedidos/${id}`),
   },
 
@@ -160,6 +175,19 @@ export const connections = {
       api.put(`/entradas-mercaderia/${id}`, data),
     delete: (id: number) => api.delete(`/entradas-mercaderia/${id}`),
   },
+
+  // Pagos
+  pagos: {
+    getAll: (params: PaginationParams) => api.get("/pagos", { params }),
+    getById: (id: number) => api.get(`/pagos/${id}`),
+    getByPedido: (pedidoId: number, params?: PaginationParams) =>
+      api.get(`/pagos/pedido/${pedidoId}`, { params }),
+    getByFecha: (fecha: string, params?: PaginationParams) =>
+      api.get(`/pagos/fecha/${fecha}`, { params }),
+    create: (data: Omit<Pago, "id">) => api.post("/pagos", data),
+    update: (id: number, data: Partial<Pago>) => api.put(`/pagos/${id}`, data),
+    delete: (id: number) => api.delete(`/pagos/${id}`),
+  },
 };
 
 export type {
@@ -171,6 +199,7 @@ export type {
   Despacho,
   EntradaMercaderia,
   DetalleEntradaMercaderia,
+  Pago,
 };
 
 export default connections;

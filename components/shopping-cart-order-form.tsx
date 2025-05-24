@@ -27,6 +27,7 @@ import { Switch } from "@/components/ui/switch";
 import { connections } from "@/data/connections";
 import { Producto, Pedido, DetallePedido } from "@/data/connections";
 
+// Definición de categorías y presentaciones
 const CATEGORIES = {
   1: "Abarrotes",
   2: "Trigos, harinas y hojuelas",
@@ -52,6 +53,13 @@ const PRESENTATIONS = {
   11: "HARINAS",
 };
 
+// Mapeo de puntos de venta con sus vendedores
+const PUNTOS_DE_VENTA = {
+  tienda1: { nombre: "Punto de Venta - Tienda 1", vendedor_id: 1 },
+  tienda2: { nombre: "Punto de Venta - Tienda 2", vendedor_id: 2 },
+  tienda3: { nombre: "Punto de Venta - Tienda 3", vendedor_id: 3 },
+};
+
 type CartItem = {
   id: number;
   codigo: string;
@@ -74,6 +82,7 @@ interface ShoppingCartOrderFormProps {
   pointOfSale?: string;
 }
 
+// Componente Memoizado del Item del Carrito
 const CartItem = memo(
   ({
     item,
@@ -214,6 +223,8 @@ export function ShoppingCartOrderForm({
 }: ShoppingCartOrderFormProps) {
   const router = useRouter();
   const { toast } = useToast();
+
+  // Estados
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isClient, setIsClient] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -223,21 +234,28 @@ export function ShoppingCartOrderForm({
   const [selectedPointOfSale, setSelectedPointOfSale] = useState(pointOfSale);
   const [products, setProducts] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedSellerId, setSelectedSellerId] = useState<number>(1); // Nuevo estado
+
   const isEditing = !!orderId;
 
+  // Efecto para cambiar el sellerId cuando se seleccione un nuevo punto de venta
+  useEffect(() => {
+    const currentVendedorId =
+      PUNTOS_DE_VENTA[selectedPointOfSale as keyof typeof PUNTOS_DE_VENTA]
+        .vendedor_id;
+    setSelectedSellerId(currentVendedorId);
+  }, [selectedPointOfSale]);
+
+  // Inicialización del cliente
   useEffect(() => {
     setIsClient(true);
-
-    // Priorizar initialCart si estamos editando
     if (isEditing && initialCart.length > 0) {
       setCart(initialCart);
     } else {
-      // Si no es edición, intentar cargar del localStorage
       const savedCart = localStorage.getItem("cart");
       if (savedCart) {
         try {
-          const parsedCart = JSON.parse(savedCart);
-          setCart(parsedCart);
+          setCart(JSON.parse(savedCart));
         } catch (e) {
           console.error("Error parsing cart", e);
           setCart(initialCart);
@@ -248,13 +266,14 @@ export function ShoppingCartOrderForm({
     }
   }, [initialCart, isEditing]);
 
+  // Guardar carrito en localStorage
   useEffect(() => {
     if (isClient) {
       localStorage.setItem("cart", JSON.stringify(cart));
     }
   }, [cart, isClient]);
 
-  // Load products
+  // Cargar productos
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -451,17 +470,13 @@ export function ShoppingCartOrderForm({
       };
 
       if (isEditing && id) {
-        // Ahora verificamos el id numérico en lugar de orderId
-        // Actualizar pedido existente usando el ID numérico
         await connections.pedidos.update(id, pedidoData);
         localStorage.removeItem("cart");
-        //console.log(pedidoData);
         toast({
           title: "Pedido actualizado",
           description: `El pedido #${orderId} ha sido actualizado correctamente.`,
         });
       } else {
-        // Crear nuevo pedido
         function generarNumeroPedidoConFecha(): string {
           const ahora = new Date();
           const fecha = [
@@ -469,25 +484,23 @@ export function ShoppingCartOrderForm({
             String(ahora.getMonth() + 1).padStart(2, "0"),
             String(ahora.getDate()).padStart(2, "0"),
           ].join("");
-
           const caracteres = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
           let randomPart = "";
-
           for (let i = 0; i < 4; i++) {
             randomPart += caracteres.charAt(
               Math.floor(Math.random() * caracteres.length)
             );
           }
-
           return `PED-${fecha}-${randomPart}`;
         }
 
         const newPedidoData: Omit<Pedido, "id"> = {
           ...pedidoData,
-          cliente_id: 1, // Asumiendo cliente por defecto
+          cliente_id: 1,
           numero: generarNumeroPedidoConFecha(),
           fecha: new Date(),
           estado: "PENDIENTE",
+          vendedor_id: selectedSellerId, // Aquí usamos el valor dinámico
         } as Omit<Pedido, "id">;
 
         const response = await connections.pedidos.create(newPedidoData);
@@ -598,9 +611,6 @@ export function ShoppingCartOrderForm({
                       S/.{product.precio_minimo?.toFixed(2)}
                     </span>
                   </div>
-                  {/* <div className="text-[10px] text-gray-500 text-right italic">
-                    Desde 5 unidades
-                  </div> */}
                 </div>
                 <div className="flex justify-between items-center mb-1">
                   <Badge
@@ -642,6 +652,7 @@ export function ShoppingCartOrderForm({
           )}
         </div>
       </div>
+
       {/* Shopping Cart */}
       <div className="border rounded-lg p-4 bg-white">
         <div className="flex items-center gap-2 mb-4 text-blue-700">
