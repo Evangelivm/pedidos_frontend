@@ -22,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-// Importamos Cliente y connections
 import connections, { Cliente } from "@/data/connections";
 import { useRouter } from "next/navigation";
 
@@ -41,6 +40,7 @@ export function PaymentModal({
 }: PaymentModalProps) {
   const router = useRouter();
   const { toast } = useToast();
+
   const [paymentInfo, setPaymentInfo] = useState({
     cash: "0.00",
     yape: "0.00",
@@ -49,12 +49,13 @@ export function PaymentModal({
     customerPhone: "",
     clientId: "",
   });
+
   const [totalPaid, setTotalPaid] = useState(0);
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [clients, setClients] = useState<Cliente[]>([]);
   const [loadingClients, setLoadingClients] = useState(true);
 
-  // Cargar clientes desde la API
+  // Cargar clientes cuando se abre el modal
   useEffect(() => {
     if (isOpen) {
       setCurrentDateTime(new Date());
@@ -88,17 +89,18 @@ export function PaymentModal({
     }
   };
 
-  // Calcular total pagado
+  // Calcular total pagado (con precisión decimal)
   useEffect(() => {
-    const cash = Number.parseFloat(paymentInfo.cash) || 0;
-    const yape = Number.parseFloat(paymentInfo.yape) || 0;
-    const transfer = Number.parseFloat(paymentInfo.transfer) || 0;
-    setTotalPaid(cash + yape + transfer);
+    const cash = parseFloat(paymentInfo.cash) || 0;
+    const yape = parseFloat(paymentInfo.yape) || 0;
+    const transfer = parseFloat(paymentInfo.transfer) || 0;
+    const total = cash + yape + transfer;
+    setTotalPaid(parseFloat(total.toFixed(2)));
   }, [paymentInfo.cash, paymentInfo.yape, paymentInfo.transfer]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    // Validar campos numéricos
+
     if (name === "cash" || name === "yape" || name === "transfer") {
       if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
         setPaymentInfo((prev) => ({ ...prev, [name]: value }));
@@ -117,8 +119,8 @@ export function PaymentModal({
       setPaymentInfo((prev) => ({
         ...prev,
         clientId: clientId,
-        customerName: selectedClient!.nombre,
-        customerPhone: selectedClient!.telefono || "",
+        customerName: selectedClient.nombre,
+        customerPhone: selectedClient.telefono || "",
       }));
     }
   };
@@ -135,20 +137,24 @@ export function PaymentModal({
   );
 
   const handleCompletePayment = async () => {
-    if (totalPaid < order.total) {
+    const subtotal = parseFloat(order.subtotal) || 0;
+    const roundedSubtotal = parseFloat(subtotal.toFixed(2));
+    const roundedTotalPaid = parseFloat(totalPaid.toFixed(2));
+
+    if (roundedTotalPaid < roundedSubtotal) {
       toast({
         title: "Error en el pago",
         description:
-          "El monto total pagado debe ser igual o mayor al total del pedido.",
+          "El monto total pagado debe ser igual o mayor al subtotal del pedido.",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const cashAmount = Number.parseFloat(paymentInfo.cash) || 0;
-      const yapeAmount = Number.parseFloat(paymentInfo.yape) || 0;
-      const transferAmount = Number.parseFloat(paymentInfo.transfer) || 0;
+      const cashAmount = parseFloat(paymentInfo.cash) || 0;
+      const yapeAmount = parseFloat(paymentInfo.yape) || 0;
+      const transferAmount = parseFloat(paymentInfo.transfer) || 0;
 
       const paymentMethods = [];
 
@@ -157,41 +163,36 @@ export function PaymentModal({
           fecha: new Date(currentDateTime),
           pedido_id: order.id,
           metodo_pago: "EFECTIVO",
-          monto: cashAmount,
+          monto: parseFloat(cashAmount.toFixed(2)),
         });
       }
-
       if (yapeAmount > 0) {
         paymentMethods.push({
           fecha: new Date(currentDateTime),
           pedido_id: order.id,
           metodo_pago: "YAPE",
-          monto: yapeAmount,
+          monto: parseFloat(yapeAmount.toFixed(2)),
         });
       }
-
       if (transferAmount > 0) {
         paymentMethods.push({
           fecha: new Date(currentDateTime),
           pedido_id: order.id,
           metodo_pago: "TRANSFERENCIA",
-          monto: transferAmount,
+          monto: parseFloat(transferAmount.toFixed(2)),
         });
       }
 
-      // Enviar cada pago individualmente
       for (const pago of paymentMethods) {
         await connections.pagos.create(pago);
       }
 
-      // Actualizar cliente_id del pedido como número
       if (paymentInfo.clientId) {
         await connections.pedidos.updateClient(order.id, {
           cliente_id: parseInt(paymentInfo.clientId),
         });
       }
 
-      // Mostrar mensaje de éxito
       toast({
         title: "Pago registrado",
         description: `El pago del pedido #${order.id} ha sido guardado correctamente.`,
@@ -218,10 +219,13 @@ export function PaymentModal({
   const formattedTime = currentDateTime.toLocaleTimeString();
 
   // Calcular vuelto
-  const change = Math.max(0, totalPaid - order.total);
+  const change = Math.max(
+    0,
+    parseFloat(totalPaid.toFixed(2)) - parseFloat(order.subtotal || 0)
+  );
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader className="sticky top-0 bg-white z-10 pb-2">
           <DialogTitle className="flex items-center gap-2 text-xl">
@@ -240,9 +244,10 @@ export function PaymentModal({
               <span>{formattedTime}</span>
             </div>
             <div className="flex justify-between">
-              <span className="font-bold">Total:</span>
+              <span className="font-bold">Subtotal:</span>
               <span className="font-bold text-blue-700">
-                S/.{order?.subtotal}
+                S/.
+                {parseFloat(order?.subtotal || 0).toFixed(2)}
               </span>
             </div>
           </div>
@@ -413,7 +418,7 @@ export function PaymentModal({
               <span>Total Pagado:</span>
               <span
                 className={
-                  totalPaid >= order?.subtotal
+                  totalPaid >= parseFloat(order?.subtotal || 0)
                     ? "text-green-600"
                     : "text-red-600"
                 }
@@ -421,7 +426,7 @@ export function PaymentModal({
                 S/.{totalPaid.toFixed(2)}
               </span>
             </div>
-            {totalPaid > order?.subtotal && (
+            {totalPaid > parseFloat(order?.subtotal || 0) && (
               <div className="flex justify-between text-xs">
                 <span>Vuelto:</span>
                 <span className="text-orange-600 font-medium">
@@ -429,12 +434,13 @@ export function PaymentModal({
                 </span>
               </div>
             )}
-            {totalPaid < order?.subtotal && (
+            {totalPaid < parseFloat(order?.subtotal || 0) && (
               <div className="text-red-500 text-xs">
-                Falta S/.{(order?.subtotal - totalPaid).toFixed(2)}
+                Falta S/.
+                {(parseFloat(order?.subtotal || 0) - totalPaid).toFixed(2)}
               </div>
             )}
-            {totalPaid === order?.subtotal && (
+            {totalPaid === parseFloat(order?.subtotal || 0) && (
               <div className="text-green-600 text-xs font-medium">
                 ¡Monto exacto!
               </div>
@@ -448,11 +454,11 @@ export function PaymentModal({
           <Button
             onClick={handleCompletePayment}
             className={`${
-              totalPaid >= order?.subtotal
+              totalPaid >= parseFloat(order?.subtotal || 0)
                 ? "bg-green-600 hover:bg-green-700"
                 : "bg-gray-400 cursor-not-allowed"
             }`}
-            disabled={totalPaid < order?.subtotal}
+            disabled={totalPaid < parseFloat(order?.subtotal || 0)}
             size="sm"
           >
             <CheckCircle className="h-3.5 w-3.5 mr-1" />
