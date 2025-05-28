@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import { TopBar } from "@/components/top-bar";
 import { Button } from "@/components/ui/button";
@@ -19,7 +18,7 @@ import { ArrowLeft, Save, Tag, Percent } from "lucide-react";
 import Link from "next/link";
 import { connections } from "@/data/connections";
 
-// Category mapping (same as in ProductsPage)
+// Category mapping
 const CATEGORIES = {
   1: "Abarrotes",
   2: "Trigos, harinas y hojuelas",
@@ -31,7 +30,7 @@ const CATEGORIES = {
   8: "Alimentos balanceados para mascotas",
 };
 
-// Presentation mapping (same as in ProductsPage)
+// Presentation mapping
 const PRESENTATIONS = {
   1: "CAJA",
   2: "SACO",
@@ -58,13 +57,15 @@ export default function NewProductPage() {
     categoria_id: "",
     presentacion_id: "",
     stock: "",
-    stock_minimo: "5", // Default minimum stock
-    imagen: "",
+    stock_minimo: "5",
     activo: true,
+    imagen: null, // Add imagen field
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -72,7 +73,6 @@ export default function NewProductPage() {
     const { name, value } = e.target;
     setProductData((prev) => ({ ...prev, [name]: value }));
 
-    // Auto-calculate minimum price when suggested price changes
     if (name === "precio_sugerido" && value) {
       const suggestedPrice = Number.parseFloat(value);
       if (!isNaN(suggestedPrice)) {
@@ -89,10 +89,21 @@ export default function NewProductPage() {
     setProductData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+    } else {
+      setImageFile(null);
+      setImagePreview(null);
+    }
+  };
+
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const productId = searchParams.get("id");
-
     if (productId) {
       const loadProduct = async () => {
         try {
@@ -100,7 +111,6 @@ export default function NewProductPage() {
             Number(productId)
           );
           const product = response.data;
-
           setProductData({
             codigo: product.codigo,
             descripcion: product.descripcion,
@@ -110,8 +120,8 @@ export default function NewProductPage() {
             presentacion_id: product.presentacion_id.toString(),
             stock: product.stock.toString(),
             stock_minimo: product.stock_minimo.toString(),
-            imagen: product.imagen || "/abarrote.webp",
             activo: product.activo,
+            imagen: product.imagen, // Set existing image
           });
           setIsEditing(true);
         } catch (error) {
@@ -123,7 +133,6 @@ export default function NewProductPage() {
           router.push("/productos");
         }
       };
-
       loadProduct();
     }
   }, [router, toast]);
@@ -131,9 +140,7 @@ export default function NewProductPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-
     try {
-      // Validate form
       if (
         !productData.descripcion ||
         !productData.precio_sugerido ||
@@ -143,58 +150,53 @@ export default function NewProductPage() {
         throw new Error("Por favor complete todos los campos requeridos");
       }
 
-      // Validate prices
       const suggestedPrice = Number.parseFloat(productData.precio_sugerido);
       const minimumPrice = Number.parseFloat(productData.precio_minimo);
-
       if (isNaN(suggestedPrice)) {
         throw new Error("El precio sugerido debe ser un número válido");
       }
-
       if (isNaN(minimumPrice)) {
         throw new Error("El precio mínimo debe ser un número válido");
       }
-
       if (minimumPrice >= suggestedPrice) {
         throw new Error(
           "El precio mínimo debe ser menor que el precio sugerido"
         );
       }
 
-      // Prepare product data for API
-      const productPayload = {
-        codigo: productData.codigo,
-        descripcion: productData.descripcion,
-        categoria_id: Number(productData.categoria_id),
-        presentacion_id: Number(productData.presentacion_id),
-        precio_sugerido: suggestedPrice,
-        precio_minimo: minimumPrice,
-        stock: Number(productData.stock),
-        stock_minimo: Number(productData.stock_minimo) || 5,
-        imagen: "/abarrote.webp", // Always use Abarrote image
-        activo: true,
-      };
+      const formData = new FormData();
+
+      formData.append("codigo", productData.codigo);
+      formData.append("descripcion", productData.descripcion);
+      formData.append("categoria_id", productData.categoria_id);
+      formData.append("presentacion_id", productData.presentacion_id);
+      formData.append("precio_sugerido", suggestedPrice.toString());
+      formData.append("precio_minimo", minimumPrice.toString());
+      formData.append("stock", productData.stock);
+      formData.append("stock_minimo", productData.stock_minimo || "5");
+      formData.append("activo", "true");
+
+      if (imageFile) {
+        formData.append("imagen", imageFile); // Imagen como archivo
+      }
 
       const searchParams = new URLSearchParams(window.location.search);
       const productId = searchParams.get("id");
 
       if (isEditing && productId) {
-        // Update existing product
-        await connections.productos.update(Number(productId), productPayload);
+        await connections.productos.update(Number(productId), formData);
         toast({
           title: "Producto actualizado",
           description: `El producto "${productData.descripcion}" ha sido actualizado correctamente.`,
         });
       } else {
-        // Create new product
-        await connections.productos.create(productPayload);
+        await connections.productos.create(formData);
         toast({
           title: "Producto creado",
           description: `El producto "${productData.descripcion}" ha sido creado correctamente.`,
         });
       }
 
-      // Redirect to products page
       router.push("/productos");
     } catch (error) {
       toast({
@@ -209,6 +211,14 @@ export default function NewProductPage() {
       setIsSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview && typeof imagePreview !== "string") {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
 
   return (
     <main className="min-h-screen flex flex-col">
@@ -226,7 +236,6 @@ export default function NewProductPage() {
             </h1>
           </div>
         </div>
-
         <div className="max-w-3xl mx-auto bg-white p-6 rounded-lg border">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -267,7 +276,6 @@ export default function NewProductPage() {
                       required
                     />
                   </div>
-
                   <div>
                     <Label
                       htmlFor="precio_minimo"
@@ -288,9 +296,6 @@ export default function NewProductPage() {
                       className="border-green-200 focus:border-green-400"
                       required
                     />
-                    {/* <p className="text-xs text-gray-500 mt-1">
-                      Aplicable desde 5 unidades
-                    </p> */}
                   </div>
                 </div>
 
@@ -380,16 +385,34 @@ export default function NewProductPage() {
                 <div>
                   <Label htmlFor="imagen">Imagen</Label>
                   <div className="mt-1 flex flex-col items-center gap-2">
-                    <div className="relative w-full h-48 border rounded-md overflow-hidden">
+                    <input
+                      id="imagen"
+                      name="imagen"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                    <div className="relative w-full h-48 border rounded-md overflow-hidden mt-2">
                       <img
-                        src="/abarrote.webp"
-                        alt="Arroz Faraon"
+                        src={
+                          imagePreview
+                            ? imagePreview
+                            : productData.imagen
+                            ? `${process.env.NEXT_PUBLIC_API_URL}${productData.imagen}`
+                            : "/abarrote.webp"
+                        }
+                        alt={
+                          imagePreview
+                            ? "Vista previa del producto"
+                            : "Imagen por defecto"
+                        }
                         className="w-full h-full object-contain"
+                        onError={(e) => {
+                          e.currentTarget.src = "/abarrote.webp";
+                        }}
                       />
                     </div>
-                    <p className="text-xs text-gray-500 mt-1 text-center">
-                      Todos los productos utilizan la imagen de abarrotes.
-                    </p>
                   </div>
                 </div>
               </div>

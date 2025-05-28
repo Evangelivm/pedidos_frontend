@@ -338,11 +338,13 @@ export default function ProductsPage() {
               categoria: CATEGORIES[p.categoria_id as keyof typeof CATEGORIES],
               presentacion:
                 PRESENTATIONS[p.presentacion_id as keyof typeof PRESENTATIONS],
-              precio_sugerido: p.precio_sugerido ?? 0, // default value if undefined
-              precio_minimo: p.precio_minimo ?? 0, // default value if undefined
+              precio_sugerido: p.precio_sugerido ?? 0,
+              precio_minimo: p.precio_minimo ?? 0,
               stock: p.stock,
               stock_minimo: p.stock_minimo,
-              imagen: p.imagen ?? "/abarrote.webp", // default value if undefined
+              imagen: p.imagen
+                ? `${process.env.NEXT_PUBLIC_API_URL}${p.imagen}`
+                : "/abarrote.webp",
               activo: p.activo,
             }))}
             onProductDeleted={(id: number | void) => {

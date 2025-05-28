@@ -126,9 +126,23 @@ export const connections = {
     getByCodigo: (codigo: string) => api.get(`/productos/codigo/${codigo}`),
     getByCategoria: (categoriaId: number, params: PaginationParams) =>
       api.get(`/productos/categoria/${categoriaId}`, { params }),
-    create: (data: Omit<Producto, "id">) => api.post("/productos", data),
-    update: (id: number, data: Partial<Producto>) =>
-      api.put(`/productos/${id}`, data),
+
+    // ✅ Cambiamos el tipo de 'data' a 'any' para aceptar FormData
+    create: (data: any) =>
+      api.post("/productos", data, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }),
+
+    // ✅ Lo mismo para update
+    update: (id: number, data: any) =>
+      api.put(`/productos/${id}`, data, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }),
+
     delete: (id: number) => api.delete(`/productos/${id}`),
   },
 
