@@ -343,7 +343,7 @@ export default function ProductsPage() {
               stock: p.stock,
               stock_minimo: p.stock_minimo,
               imagen: p.imagen
-                ? `${process.env.NEXT_PUBLIC_API_URL}${p.imagen}`
+                ? `${process.env.NEXT_PUBLIC_API_URL}/uploads/${p.imagen}`
                 : "/abarrote.webp",
               activo: p.activo,
             }))}

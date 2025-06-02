@@ -399,7 +399,7 @@ export default function NewProductPage() {
                           imagePreview
                             ? imagePreview
                             : productData.imagen
-                            ? `${process.env.NEXT_PUBLIC_API_URL}${productData.imagen}`
+                            ? `${process.env.NEXT_PUBLIC_API_URL}/uploads/${productData.imagen}`
                             : "/abarrote.webp"
                         }
                         alt={
